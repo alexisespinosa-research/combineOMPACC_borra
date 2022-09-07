@@ -1,0 +1,14 @@
+CC=nvc++
+CFLAGS=-O3 -acc -Minfo=acc
+LIBS=
+OBJ=laplace_acc.o
+TARGET=laplace_acc.exe
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+
+clean:
+	rm -f $(TARGET) *.o

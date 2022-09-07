@@ -1,0 +1,14 @@
+CC=gcc
+CFLAGS=-O3 -fopenacc
+LIBS=
+OBJ=laplace_gacc.o
+TARGET=laplace_gacc.exe
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+
+clean:
+	rm -f $(TARGET) *.o

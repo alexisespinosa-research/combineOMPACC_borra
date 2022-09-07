@@ -1,0 +1,31 @@
+# --------------------
+# reset this from the command line for easier making of other test code:
+CLUSTER?=mulan
+VENDOR?=cray
+SURNAME?=singleParallelBasic
+
+# --------------------
+CC=cc
+F90=ftn
+CFLAGS=-O3 -fopenacc
+FFLAGS=-O3 -hacc
+LIBS=
+COMPILER_TAG=-D_CRAY_
+OBJ=laplace_acc.$(SURNAME).o
+TARGET=laplace_acc.$(SURNAME).exe
+
+%.o: %.f90
+	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(F90) $(FFLAGS) $(LIBS) -o $@ $^
+	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
+
+cleanAll:
+	rm -f *.exe *.o *.s
+
+cleanThis:
+	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+
+leaveThis:
+	rm -f $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s

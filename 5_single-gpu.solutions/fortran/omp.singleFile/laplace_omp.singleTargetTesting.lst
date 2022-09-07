@@ -1,0 +1,282 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                          S u m m a r y   R e p o r t
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Compilation
+-----------
+File     : /group/pawsey0001/espinosa/trainingMyself/GPU/OpenACC-OpenMP-Maciej/sc20-gpu-offloading.Additional/Additional/5_single-gpu.solutions/fortran/omp.singleFile/laplace_omp.singleTargetTesting.f90
+Compiled : 08/03/22  14:46:25
+Compiler : Version 12.0.3
+Ftnlx    : Version 12.0.3 
+Target   : x86-64
+Command  : ftn_driver.exe -hcpu=x86-rome -haccel=amdgcn-gfx908 -hnetwork=ofi
+           -hdynamic -D__CRAY_X86_ROME -D__CRAY_AMD_GFX908
+           -D__CRAYXT_COMPUTE_LINUX_TARGET -O3 -homp -rm -D_CRAY_ -c
+           -olaplace_omp.singleTargetTesting.o laplace_omp.singleTargetTesting.f
+           90
+           -I/opt/cray/pe/cce/12.0.3/cce-clang/x86_64/lib/clang/12.0.0/include
+           -I/opt/cray/pe/cce/12.0.3/cce/x86_64/include/craylibs -I/usr/include
+           -I/opt/cray/pe/libsci/21.08.1.2/CRAY/9.0/x86_64/include
+           -I/opt/cray/pe/mpich/8.1.9/ofi/cray/10.0/include
+           -I/opt/cray/pe/fftw/3.3.8.11/x86_rome/include -I/usr/include
+Program
+  Units  : LAPLACE
+          INIT
+
+ftnlx report
+------------
+Source   : /group/pawsey0001/espinosa/trainingMyself/GPU/OpenACC-OpenMP-Maciej/sc20-gpu-offloading.Additional/Additional/5_single-gpu.solutions/fortran/omp.singleFile/laplace_omp.singleTargetTesting.f90
+Date     : 08/03/2022  14:46:25
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                          S o u r c e   L i s t i n g
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+     %%%    L o o p m a r k   L e g e n d    %%%
+
+     Primary Loop Type        Modifiers
+     ------- ---- ----        ---------
+     A - Pattern matched      a - atomic memory operation
+                              b - blocked
+     C - Collapsed            c - conditional and/or computed
+     D - Deleted               
+     E - Cloned                
+     F - Flat - No calls      f - fused
+     G - Accelerated          g - partitioned
+     I - Inlined              i - interchanged
+     M - Multithreaded        m - partitioned
+                              n - non-blocking remote transfer
+                              p - partial
+     R - Rerolling            r - unrolled
+                              s - shortloop
+     V - Vectorized           w - unwound
+
+     + - More messages listed at end of listing
+     ------------------------------------------
+
+
+    1.                               program laplace
+    2.                        
+    3.                               implicit none
+    4.                               integer, parameter ::  GRIDX=2048, GRIDY=2048
+    5.                               double precision, parameter :: MAX_TEMP_ERROR=0.02
+    6.                               double precision  T(GRIDX+2,GRIDY+2)
+    7.                               double precision  T_new(GRIDX+2,GRIDY+2)
+    8.                               integer i,j
+    9.                               integer max_iterations
+   10.                               integer :: iteration=1 
+   11.                               double precision :: dt=100
+   12.                               character(len=32) :: arg
+   13.                               integer start_time,stop_time,clock_rate
+   14.                               real elapsed_time
+   15.                        
+   16.                               if (command_argument_count().ne.1) then
+   17.  +                              call getarg(0, arg)
+   18.                                 print *, 'Usage ',trim(arg),' number_of_iterations'
+   19.                               else 
+   20.  +                              call getarg(1,arg)
+   21.                                 read(arg,*)  max_iterations
+   22.                               end if 
+   23.                        
+   24.  +                            call system_clock(count_rate=clock_rate)
+   25.                               call system_clock(count=start_time)
+   26.                        
+   27.  + VpAr2 I----------<>        call init(GRIDX,GRIDY,T)
+   28.                        
+   29.                               !simulation iterations
+   30.                               !$omp target enter data map(to:T) map(alloc:T_new)
+   31.                               !$aeg-omp target enter data map(alloc:T_new)
+   32.                               !$aeg-omp target data map(to:T)
+   33.                               !$aeg-omp end target data
+   34.                               !$omp target update to(T)
+   35.  + 1-----------------<        do while ((dt.gt.MAX_TEMP_ERROR).and. &
+   36.    1                                   (iteration.le.max_iterations))
+   37.    1                   
+   38.    1                             !reset dt
+   39.    1                             dt=0.0 
+   40.  + 1 MG--------------<           !$omp target map(tofrom:T) map(tofrom:dt)
+   41.    1 MG                          !$aeg-omp target map(tofrom:dt)
+   42.    1 MG M------------<           !$omp teams reduction(max:dt)
+   43.    1 MG M                        !{
+   44.    1 MG M                        !main computational kernel, average over neighbours in the grid
+   45.  + 1 MG M                        !$omp distribute parallel do collapse(2)
+ftn-7256 ftn: WARNING LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 45 
+   An OpenMP parallel construct in a target region is limited to a single thread.
+
+   46.    1 MG M C----------<           do j=2,GRIDY+1
+   47.  + 1 MG M C gCr4-----<              do i=2,GRIDX+1
+   48.    1 MG M C gCr4                       T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
+   49.    1 MG M C gCr4----->              end do
+   50.    1 MG M C---------->           end do 
+   51.    1 MG M              
+   52.    1 MG M                        !compute the largest change and copy T_new to T 
+   53.  + 1 MG M                        !$omp distribute parallel do collapse(2) reduction(max:dt)
+ftn-7256 ftn: WARNING LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 53 
+   An OpenMP parallel construct in a target region is limited to a single thread.
+
+   54.    1 MG M C----------<           do j=2,GRIDY+1
+   55.  + 1 MG M C gCr4-----<              do i=2,GRIDX+1
+   56.    1 MG M C gCr4                       dt = max(abs(T_new(i,j)-T(i,j)),dt)
+   57.    1 MG M C gCr4                       T(i,j)=T_new(i,j)
+   58.    1 MG M C gCr4----->              end do
+   59.    1 MG M C---------->           end do
+   60.    1 MG M                        !}
+   61.    1 MG M------------>           !$omp end teams
+   62.    1 MG-------------->           !$omp end target
+   63.    1                             
+   64.    1                             !periodically print largest change
+   65.    1                             if (mod(iteration,100).eq.0) then
+   66.    1                                print "(a,i4.0,a,f8.6)",'Iteration ',iteration,', dt ',dt
+   67.    1                                !@@!$omp target update from(T)
+   68.    1                                print "(a,E15.8)",'T(0.9,0.9)=',T(int(GRIDX*0.9),int(GRIDY*0.9))
+   69.    1                             end if  
+   70.    1                              
+   71.    1                             iteration=iteration+1        
+   72.    1----------------->        end do
+   73.                               !$omp target exit data map(from:T) map(delete:T_new) 
+   74.                               call system_clock(count=stop_time)
+   75.                               elapsed_time=real(stop_time-start_time)/real(clock_rate)
+   76.                               print "(a,f10.6,a)",'Total time was ',elapsed_time,' seconds.'
+   77.                               print "(a,E15.8)",'T(0.9,0.9)=',T(int(GRIDX*0.9),int(GRIDY*0.9))
+   78.                        
+   79.                               end program laplace
+
+ftn-3021 ftn: IPA LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 17 
+  "getarg" was not inlined because the compiler was unable to locate the routine.
+
+ftn-3021 ftn: IPA LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 20 
+  "getarg" was not inlined because the compiler was unable to locate the routine.
+
+ftn-3021 ftn: IPA LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 24 
+  "IRTC_RATE_I8" was not inlined because the compiler was unable to locate the routine.
+
+ftn-3001 ftn: IPA LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 27 
+  Leaf "init"(/group/pawsey0001/espinosa/trainingMyself/GPU/OpenACC-OpenMP-Maciej/sc20-gpu-offloading.Additional/Additional/5_single-gpu.solutions/fortran/omp.singleFile/laplace_omp.singleTargetTesting.f90:81) was inlined because argument 1 is a constant.
+
+ftn-6231 ftn: VECTOR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 27 
+  A statement was replaced by a library call.
+
+ftn-6009 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 27 
+  A floating point expression involving an induction variable was strength reduced by optimization.  This may cause numerical
+  differences.
+
+ftn-6005 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 27 
+  A loop starting at line 27 was unrolled 2 times.
+
+ftn-6209 ftn: VECTOR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 27 
+  A loop starting at line 27 was partially vectorized.
+
+ftn-6262 ftn: VECTOR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 35 
+  A loop starting at line 35 was not vectorized because it contains a call to a subroutine or function on line 40.
+
+ftn-6405 ftn: ACCEL LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 40 
+  A region starting at line 40 and ending at line 62 was placed on the accelerator.
+
+ftn-6823 ftn: THREAD LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 40 
+  A region starting at line 40 and ending at line 62 was multi-threaded.
+
+ftn-6416 ftn: ACCEL LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 40 
+  If not already present: allocate memory and copy variable "dt" to accelerator, copy back at line 62 (acc_copy).
+
+ftn-6416 ftn: ACCEL LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 40 
+  If not already present: allocate memory and copy user shaped variable "t" to accelerator, copy back at line 62 (acc_copy).
+
+ftn-6416 ftn: ACCEL LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 40 
+  If not already present: allocate memory and copy whole array "t_new" to accelerator, copy back at line 62 (acc_copy).
+
+ftn-6823 ftn: THREAD LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 42 
+  A region starting at line 42 and ending at line 61 was multi-threaded.
+
+ftn-6060 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 46 
+  A loop nest starting at line 46 was collapsed according to user directive.
+
+ftn-6060 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 47 
+  A loop nest starting at line 47 was collapsed according to user directive.
+
+ftn-6029 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 47 
+  A loop nest starting at line 47 was collapsed with rediscovery of loop control variables.
+
+ftn-6005 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 47 
+  A loop starting at line 47 was unrolled 4 times.
+
+ftn-6430 ftn: ACCEL LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 47 
+  A loop starting at line 47 was partitioned across the threadblocks and the 128 threads within a threadblock.
+
+ftn-6060 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 54 
+  A loop nest starting at line 54 was collapsed according to user directive.
+
+ftn-6060 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 55 
+  A loop nest starting at line 55 was collapsed according to user directive.
+
+ftn-6029 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 55 
+  A loop nest starting at line 55 was collapsed with rediscovery of loop control variables.
+
+ftn-6005 ftn: SCALAR LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 55 
+  A loop starting at line 55 was unrolled 4 times.
+
+ftn-6430 ftn: ACCEL LAPLACE, File = laplace_omp.singleTargetTesting.f90, Line = 55 
+  A loop starting at line 55 was partitioned across the threadblocks and the 128 threads within a threadblock.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                          S o u r c e   L i s t i n g
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+   80.                        
+   81.                               subroutine init(GRIDX, GRIDY, T)
+   82.                               implicit none
+   83.                               integer, intent( in ) :: GRIDX, GRIDY 
+   84.                               double precision, intent( out ) :: T(GRIDX+2,GRIDY+2)
+   85.                               integer i,j
+   86.                          
+   87.    C-----------------<        do j=1,GRIDY+2
+   88.    C AC--------------<           do i=1,GRIDX+2
+   89.    C AC                             T(i,j)=0.0
+   90.    C AC-------------->           end do
+   91.    C----------------->        end do
+   92.                        
+   93.                        !      these booundary conditions never change throughout run
+   94.                         
+   95.                        !      set left side to 0 and right to a linear increase
+   96.    Vr2---------------<        do i=1,GRIDX+2
+   97.    Vr2                           T(i,1)=0.0
+   98.  + Vr2                           T(i,GRIDY+2)=(128.0/GRIDX)*(i-1)
+   99.    Vr2--------------->        end do
+  100.                        
+  101.                        !      set top to 0 and bottom to linear increase
+  102.    Vp----------------<        do j=1,GRIDY+2
+  103.    Vp                            T(1,j)=0.0
+  104.  + Vp                            T(GRIDY+2,j)=(128.0/GRIDY)*(j-1)   
+  105.    Vp---------------->        end do
+  106.                        
+  107.                               end subroutine init
+
+ftn-6003 ftn: SCALAR INIT, File = laplace_omp.singleTargetTesting.f90, Line = 87 
+  A loop starting at line 87 was collapsed into the loop starting at line 88.
+
+ftn-6202 ftn: VECTOR INIT, File = laplace_omp.singleTargetTesting.f90, Line = 88 
+  A loop starting at line 88 was replaced by a library call.
+
+ftn-6005 ftn: SCALAR INIT, File = laplace_omp.singleTargetTesting.f90, Line = 96 
+  A loop starting at line 96 was unrolled 2 times.
+
+ftn-6204 ftn: VECTOR INIT, File = laplace_omp.singleTargetTesting.f90, Line = 96 
+  A loop starting at line 96 was vectorized.
+
+ftn-6009 ftn: SCALAR INIT, File = laplace_omp.singleTargetTesting.f90, Line = 98 
+  A floating point expression involving an induction variable was strength reduced by optimization.  This may cause numerical
+  differences.
+
+ftn-6209 ftn: VECTOR INIT, File = laplace_omp.singleTargetTesting.f90, Line = 102 
+  A loop starting at line 102 was partially vectorized.
+
+ftn-6009 ftn: SCALAR INIT, File = laplace_omp.singleTargetTesting.f90, Line = 104 
+  A floating point expression involving an induction variable was strength reduced by optimization.  This may cause numerical
+  differences.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

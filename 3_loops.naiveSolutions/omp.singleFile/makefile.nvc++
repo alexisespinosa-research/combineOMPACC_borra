@@ -1,0 +1,14 @@
+CC=nvc++
+CFLAGS=-O3 -mp=gpu -Minfo=mp
+LIBS=
+OBJ=laplace_mp.o
+TARGET=laplace_mp.exe
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+
+clean:
+	rm -f $(TARGET) *.o

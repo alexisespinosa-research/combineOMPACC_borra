@@ -1,0 +1,19 @@
+CC=nvcc
+CFLAGS=-O3 -acc -Minfo=accel
+LIBS=
+SURNAME=twoKernelsBasic
+OBJ=laplace_acc.$(SURNAME).o
+TARGET=laplace_acc.$(SURNAME).exe
+COMPILER_TAG=-D_PGI_
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+
+cleanAll:
+	rm -f $(TARGET) *.exe *.o
+
+cleanThis:
+	rm -f $(TARGET) *.$(SURNAME).exe *.$(SURNAME).o

@@ -1,0 +1,203 @@
+CC=pgcc
+CFLAGS=-O3
+OMPFLAGS=-mp
+#OMPFLAGS=
+ACCFLAGS=-acc -Minfo=accel -ta=tesla:cc70
+#ACCFLAGS=
+MANFLAGS=-ta=tesla:managed
+DYNFLAGS=-shared -fPIC
+#STAFLAGS=-ta=tesla:nordc
+STAFLAGS=
+EXEFLAGS=-ta=tesla:cc70
+COMPILER_TAG=-D_PGI_
+LIBS=
+
+.PHONY: dynamic
+dynamic: laplace_acc-omp.dyn.exe libfunctions_omp.so libfunctions_acc.so 
+
+laplace_acc-omp.dyn.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+functions_omp.dyn.o: functions_omp.c
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(DYNFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+functions_acc.dyn.o: functions_acc.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(DYNFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+libfunctions_omp.so: functions_omp.dyn.o
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(DYNFLAGS) $(COMPILER_TAG) -o $@ $<
+
+libfunctions_acc.so: functions_acc.dyn.o
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(DYNFLAGS) $(COMPILER_TAG) -o $@ $<
+
+laplace_acc-omp.dyn.exe: laplace_acc-omp.dyn.o libfunctions_omp.so libfunctions_acc.so
+	$(CC) $(CFLAGS) $(EXEFLAGS) $(COMPILER_TAG) -L. -lfunctions_omp -lfunctions_acc -o $@ $<
+
+.PHONY: dynamicNoGPU
+dynamicNoGPU: laplace_acc-omp.dynnogpu.exe libfunctions_omp_nogpu.so libfunctions_acc_nogpu.so 
+
+functions_omp.dynnogpu.o: functions_omp.c
+	$(CC) $(CFLAGS) $(DYNFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+functions_acc.dynnogpu.o: functions_acc.c
+	$(CC) $(CFLAGS) $(DYNFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+libfunctions_omp_nogpu.so: functions_omp.dynnogpu.o
+	$(CC) $(CFLAGS) $(DYNFLAGS) $(COMPILER_TAG) -o $@ $<
+
+libfunctions_acc_nogpu.so: functions_acc.dynnogpu.o
+	$(CC) $(CFLAGS) $(DYNFLAGS) $(COMPILER_TAG) -o $@ $<
+
+laplace_acc-omp.dynnogpu.exe: laplace_acc-omp.dyn.o libfunctions_omp_nogpu.so libfunctions_acc_nogpu.so
+	$(CC) $(CFLAGS) $(COMPILER_TAG) -L. -lfunctions_omp_nogpu -lfunctions_acc_nogpu -o $@ $<
+
+.PHONY: accDynamic
+accDynamic: laplace_acc.dyn.exe libfunctions_acc.so 
+
+laplace_acc.dyn.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -c -o $@ $<
+
+laplace_acc.dyn.exe: laplace_acc.dyn.o libfunctions_acc.so
+	$(CC) $(CFLAGS) $(EXEFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -L. -lfunctions_acc -o $@ $<
+
+.PHONY: accDynamicManaged
+accDynamicManaged: laplace_acc.dyn-man.exe libfunctions_acc-man.so 
+
+laplace_acc.dyn-man.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_JUSTACC_ -c -o $@ $<
+
+functions_acc.dyn-man.o: functions_acc.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(DYNFLAGS) $(COMPILER_TAG) $(MANFLAGS) -c -o $@ $<
+
+libfunctions_acc-man.so: functions_acc.dyn-man.o
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(DYNFLAGS) $(COMPILER_TAG) $(MANFLAGS) -o $@ $<
+
+laplace_acc.dyn-man.exe: laplace_acc.dyn-man.o libfunctions_acc-man.so
+	$(CC) $(CFLAGS) $(EXEFLAGS) $(COMPILER_TAG) $(MANFLAGS) -L. -lfunctions_acc-man -o $@ $<
+
+.PHONY: static
+static: laplace_acc-omp.sta.exe
+
+laplace_acc-omp.sta.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(STAFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+functions_omp.sta.o: functions_omp.c
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(STAFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+functions_acc.sta.o: functions_acc.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(STAFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+laplace_acc-omp.sta.exe: laplace_acc-omp.sta.o functions_omp.sta.o functions_acc.sta.o
+	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) $(STAFLAGS) $(COMPILER_TAG) -o $@ $^
+
+.PHONY: staticNoGPU
+staticNoGPU: laplace_acc-omp.stanogpu.exe
+
+laplace_acc-omp.stanogpu.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(STAFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+functions_omp.stanogpu.o: functions_omp.c
+	$(CC) $(CFLAGS) $(STAFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+functions_acc.stanogpu.o: functions_acc.c
+	$(CC) $(CFLAGS) $(STAFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+laplace_acc-omp.stanogpu.exe: laplace_acc-omp.stanogpu.o functions_omp.stanogpu.o functions_acc.stanogpu.o
+	$(CC) $(CFLAGS) $(LIBS) $(STAFLAGS) $(COMPILER_TAG) -o $@ $^
+
+.PHONY: accStatic
+accStatic: laplace_acc.sta.exe
+
+laplace_acc.sta.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(STAFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -c -o $@ $<
+
+laplace_acc.sta.exe: laplace_acc.sta.o functions_acc.sta.o
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(STAFLAGS) $(COMPILER_TAG) -o $@ $^
+
+.PHONY: accStaticManaged
+accStaticManaged: laplace_acc.sta-man.exe
+
+laplace_acc.sta-man.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(STAFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_JUSTACC_ -c -o $@ $<
+
+functions_acc.sta-man.o: functions_acc.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(STAFLAGS) $(COMPILER_TAG) $(MANFLAGS) -c -o $@ $<
+
+laplace_acc.sta-man.exe: laplace_acc.sta-man.o functions_acc.sta-man.o
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(STAFLAGS) $(COMPILER_TAG) $(MANFLAGS) -o $@ $^
+
+.PHONY: averageInternalStatic
+averageInternalStatic: laplace_acc-omp.aveista.exe
+
+laplace_acc-omp.aveista.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_AVERAGE_INTERNAL_ -c -o $@ $<
+
+laplace_acc-omp.aveista.exe: laplace_acc-omp.aveista.o functions_acc.sta.o
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(COMPILER_TAG) -o $@ $^
+
+.PHONY: averageInternalDynamic
+averageInternalDynamic: laplace_acc-omp.aveidyn.exe
+
+laplace_acc-omp.aveidyn.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_AVERAGE_INTERNAL_ -c -o $@ $<
+
+laplace_acc-omp.aveidyn.exe: laplace_acc-omp.aveidyn.o libfunctions_acc.so
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(COMPILER_TAG) -L. -lfunctions_acc -o $@ $<
+
+.PHONY: updateInternalStatic
+updateInternalStatic: laplace_acc-omp.updista.exe
+
+laplace_acc-omp.updista.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_UPDATE_INTERNAL_ -c -o $@ $<
+
+laplace_acc-omp.updista.exe: laplace_acc-omp.updista.o functions_acc.sta.o
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(COMPILER_TAG) -o $@ $^
+
+.PHONY: updateInternalDynamic
+updateInternalDynamic: laplace_acc-omp.updidyn.exe
+
+laplace_acc-omp.updidyn.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_UPDATE_INTERNAL_ -c -o $@ $<
+
+laplace_acc-omp.updidyn.exe: laplace_acc-omp.updidyn.o libfunctions_acc.so
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(COMPILER_TAG) -L. -lfunctions_acc -o $@ $<
+
+.PHONY: allInternal
+allInternal: laplace_acc-omp.alli.exe
+
+laplace_acc-omp.alli.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c -o $@ $<
+
+laplace_acc-omp.alli.exe: laplace_acc-omp.alli.o
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(COMPILER_TAG) -o $@ $^
+
+.PHONY: allInternalNoGPU
+allInternalNoGPU: laplace_acc-omp.allinogpu.exe
+
+laplace_acc-omp.allinogpu.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c -o $@ $<
+
+laplace_acc-omp.allinogpu.exe: laplace_acc-omp.allinogpu.o
+	$(CC) $(CFLAGS) $(LIBS) $(COMPILER_TAG) -o $@ $^
+
+.PHONY: allInternalAcc
+allInternalAcc: laplace_acc-omp.accalli.exe
+
+laplace_acc-omp.accalli.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
+
+laplace_acc-omp.accalli.exe: laplace_acc-omp.accalli.o
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(COMPILER_TAG) -o $@ $^
+
+.PHONY: allInternalAccManaged
+allInternalAccManaged: laplace_acc-omp.accalli-man.exe
+
+laplace_acc-omp.accalli-man.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
+
+laplace_acc-omp.accalli-man.exe: laplace_acc-omp.accalli-man.o
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -o $@ $^
+
+.PHONY: clean
+clean:
+	rm -f *.exe *.so *.o

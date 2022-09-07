@@ -1,0 +1,74 @@
+==426030== NVPROF is profiling process 426030, command: ./topaz.nvhpc.nvfortran.laplace_omp.singleTargetTesting.exe 250
+Iteration   50, dt 0.917911
+T(0.9,0.9)= 0.00000000E+00
+Iteration  100, dt 0.457795
+T(0.9,0.9)= 0.00000000E+00
+Iteration  150, dt 0.305003
+T(0.9,0.9)= 0.00000000E+00
+Iteration  200, dt 0.228820
+T(0.9,0.9)= 0.00000000E+00
+Iteration  250, dt 0.182759
+T(0.9,0.9)= 0.00000000E+00
+Total time was   0.541120 seconds.
+T(0.9,0.9)= 0.00000000E+00
+==426030== Profiling application: ./topaz.nvhpc.nvfortran.laplace_omp.singleTargetTesting.exe 250
+==426030== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   95.43%  82.407ms       250  329.63us  324.35us  347.29us  nvkernel_MAIN__F1L40_2_
+                    3.52%  3.0408ms       253  12.018us  1.1520us  1.3652ms  [CUDA memcpy HtoD]
+                    0.67%  581.53us       500  1.1630us  1.1190us  9.7910us  [CUDA memset]
+                    0.37%  323.49us       250  1.2930us  1.2470us  2.2080us  [CUDA memcpy DtoH]
+      API calls:   51.48%  160.87ms         2  80.437ms     255ns  160.87ms  cuDevicePrimaryCtxRetain
+                   27.75%  86.716ms       752  115.31us  1.3380us  1.3623ms  cuStreamSynchronize
+                    8.18%  25.561ms         1  25.561ms  25.561ms  25.561ms  cuMemHostAlloc
+                    6.58%  20.573ms         1  20.573ms  20.573ms  20.573ms  cuMemAllocManaged
+                    2.11%  6.6017ms       250  26.406us  4.3110us  5.0533ms  cuLaunchKernel
+                    1.45%  4.5208ms         1  4.5208ms  4.5208ms  4.5208ms  cuModuleLoadDataEx
+                    0.62%  1.9365ms         5  387.31us  12.553us  993.62us  cuMemAlloc
+                    0.49%  1.5159ms       500  3.0310us  1.9790us  25.931us  cuMemsetD32Async
+                    0.32%  1.0080ms       250  4.0310us  2.8060us  20.341us  cuMemcpyDtoHAsync
+                    0.31%  960.58us       250  3.8420us  2.6780us  23.429us  cuMemcpyAsync
+                    0.30%  929.67us         1  929.67us  929.67us  929.67us  cuMemAllocHost
+                    0.17%  521.16us       252  2.0680us  1.5510us  5.3630us  cuEventRecord
+                    0.11%  346.24us       251  1.3790us  1.0080us  10.276us  cuEventSynchronize
+                    0.06%  186.03us        12  15.502us     126ns  180.70us  cuDeviceGetAttribute
+                    0.02%  70.028us       250     280ns     180ns  1.7640us  cuFuncGetAttribute
+                    0.02%  60.771us         3  20.257us  12.374us  34.360us  cuMemcpyHtoDAsync
+                    0.01%  34.389us         1  34.389us  34.389us  34.389us  cuDeviceGetName
+                    0.00%  10.258us         3  3.4190us     921ns  5.7600us  cuPointerGetAttributes
+                    0.00%  10.197us         1  10.197us  10.197us  10.197us  cuModuleGetFunction
+                    0.00%  9.8110us         3  3.2700us     977ns  4.6570us  cuEventCreate
+                    0.00%  8.9690us         1  8.9690us  8.9690us  8.9690us  cuDeviceGetPCIBusId
+                    0.00%  7.2690us         5  1.4530us     302ns  4.2020us  cuCtxSetCurrent
+                    0.00%  5.9110us         3  1.9700us     355ns  5.1750us  cuDeviceGet
+                    0.00%  4.0600us         4  1.0150us     241ns  2.4810us  cuDeviceGetCount
+                    0.00%  3.0420us         1  3.0420us  3.0420us  3.0420us  cuCtxGetCurrent
+                    0.00%     950ns         1     950ns     950ns     950ns  cuInit
+                    0.00%     639ns         1     639ns     639ns     639ns  cuDriverGetVersion
+                    0.00%     575ns         1     575ns     575ns     575ns  cuDeviceComputeCapability
+ OpenACC (excl):   66.79%  32.659ms         1  32.659ms  32.659ms  32.659ms  acc_enter_data@laplace_omp.singleTargetTesting.f90:32
+                    9.32%  4.5564ms         1  4.5564ms  4.5564ms  4.5564ms  acc_device_init@laplace_omp.singleTargetTesting.f90:31
+                    3.97%  1.9418ms       250  7.7670us  5.5900us  44.630us  acc_enqueue_download@laplace_omp.singleTargetTesting.f90:62 (dt)
+                    3.30%  1.6123ms       250  6.4490us  3.6900us  26.953us  acc_wait@laplace_omp.singleTargetTesting.f90:62
+                    3.26%  1.5937ms       250  6.3740us  5.5950us  53.214us  acc_wait@laplace_omp.singleTargetTesting.f90:40
+                    3.16%  1.5465ms       250  6.1860us  4.0960us  102.19us  acc_exit_data@laplace_omp.singleTargetTesting.f90:40
+                    3.13%  1.5290ms       250  6.1150us  4.1740us  44.973us  acc_enter_data@laplace_omp.singleTargetTesting.f90:40
+                    2.79%  1.3651ms         1  1.3651ms  1.3651ms  1.3651ms  acc_wait@laplace_omp.singleTargetTesting.f90:32
+                    2.31%  1.1273ms       250  4.5090us  3.2760us  18.373us  acc_enqueue_upload@laplace_omp.singleTargetTesting.f90:40 (dt)
+                    1.73%  847.92us         1  847.92us  847.92us  847.92us  acc_enter_data@laplace_omp.singleTargetTesting.f90:31
+                    0.18%  90.099us         3  30.033us  19.065us  50.345us  acc_enqueue_upload@laplace_omp.singleTargetTesting.f90:32 (t)
+                    0.04%  19.404us         1  19.404us  19.404us  19.404us  acc_wait@laplace_omp.singleTargetTesting.f90:31
+                    0.01%  4.6110us         1  4.6110us  4.6110us  4.6110us  acc_exit_data@laplace_omp.singleTargetTesting.f90:75
+                    0.00%  2.2820us         1  2.2820us  2.2820us  2.2820us  acc_exit_data@laplace_omp.singleTargetTesting.f90:32
+                    0.00%       0ns         1       0ns       0ns       0ns  acc_create@laplace_omp.singleTargetTesting.f90:31
+                    0.00%       0ns         1       0ns       0ns       0ns  acc_create@laplace_omp.singleTargetTesting.f90:32
+                    0.00%       0ns         1       0ns       0ns       0ns  acc_alloc@laplace_omp.singleTargetTesting.f90:40
+                    0.00%       0ns       250       0ns       0ns       0ns  acc_delete@laplace_omp.singleTargetTesting.f90:62
+                    0.00%       0ns       250       0ns       0ns       0ns  acc_create@laplace_omp.singleTargetTesting.f90:40
+                    0.00%       0ns         1       0ns       0ns       0ns  acc_alloc@laplace_omp.singleTargetTesting.f90:31
+                    0.00%       0ns         1       0ns       0ns       0ns  acc_alloc@laplace_omp.singleTargetTesting.f90:32
+                    0.00%       0ns         1       0ns       0ns       0ns  acc_delete@laplace_omp.singleTargetTesting.f90:74
+                    0.00%       0ns         1       0ns       0ns       0ns  acc_delete@laplace_omp.singleTargetTesting.f90:75
+
+==426030== Unified Memory profiling result:
+Total CPU Page faults: 1

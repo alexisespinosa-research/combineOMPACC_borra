@@ -1,0 +1,27 @@
+CLUSTER=topaz
+VENDOR=nvhpc
+CC=nvc++
+F90=nvfortran
+CFLAGS=-O3 -acc -Minfo=accel
+FFLAGS=-O3 -acc -Minfo=accel
+LIBS=
+COMPILER_TAG=-D_NVHPC_
+SURNAME=singleParallelBasic
+OBJ=laplace_acc.$(SURNAME).o
+TARGET=laplace_acc.$(SURNAME).exe
+
+%.o: %.f90
+	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(F90) $(FFLAGS) $(LIBS) -o $@ $^
+	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
+
+cleanAll:
+	rm -f *.exe *.o
+
+cleanThis:
+	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *.$(SURNAME).o
+
+leaveThis:
+	rm -f $(TARGET) *.$(SURNAME).o

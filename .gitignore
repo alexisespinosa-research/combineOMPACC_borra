@@ -1,0 +1,16 @@
+*.exe
+*.so
+*.o
+*.mod
+*.smod
+*.swp
+core.*
+*.DS_Store
+results.copy_stats.csv
+results.csv
+results.db
+results.hsa_stats.csv
+results.json
+results.stats.csv
+results.sysinfo.txt
+a.out

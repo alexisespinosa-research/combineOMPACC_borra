@@ -1,0 +1,19 @@
+CC=nvc++
+CFLAGS=-O3 -mp=gpu -Minfo=mp
+LIBS=
+COMPILER_TAG=-D_NVC_
+SURNAME=twoTargetsBasic
+OBJ=laplace_mp.$(SURNAME).o
+TARGET=laplace_mp.$(SURNAME).exe
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+
+cleanAll:
+	rm -f *.exe *.o
+
+cleanThis:
+	rm -f $(TARGET) *.$(SURNAME).o

@@ -1,0 +1,19 @@
+CC=gcc
+CFLAGS=-O3 -fopenacc
+LIBS=
+SURNAME=twoKernelsBasic
+OBJ=laplace_acc.$(SURNAME).o
+TARGET=laplace_acc.$(SURNAME).exe
+COMPILER_TAG=-D_GCC_
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+
+cleanAll:
+	rm -f $(TARGET) *.exe *.o
+
+cleanThis:
+	rm -f $(TARGET) *.$(SURNAME).exe *.$(SURNAME).o

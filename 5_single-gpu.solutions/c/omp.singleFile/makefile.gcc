@@ -1,0 +1,19 @@
+CC=gcc
+CFLAGS=-O3 -fopenmp
+LIBS=
+COMPILER_TAG=-D_GCC_
+SURNAME=twoTargetsBasic
+OBJ=laplace_mp.$(SURNAME).o
+TARGET=laplace_mp.$(SURNAME).exe
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+
+cleanAll:
+	rm -f *.exe *.o
+
+cleanThis:
+	rm -f $(TARGET) *.$(SURNAME).o
