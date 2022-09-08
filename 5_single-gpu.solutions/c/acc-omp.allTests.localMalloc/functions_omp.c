@@ -4,7 +4,7 @@
 #include "functions_omp.h"
 #include "globals.h"
 
-#ifndef _PGI_
+#if !defined (_PGI_) && !defined (_NVC_)
    #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #endif
 
@@ -43,7 +43,7 @@ double updateT_omp(double *restrict U, double *restrict U_new,double dt_old)
    #pragma omp teams distribute parallel for collapse(2) reduction(max:dt) //Note: Always active and always together with one of the above
    for(i = 1; i <= GRIDX; i++){
       for(j = 1; j <= GRIDY; j++){
-         #ifdef _PGI_
+         #if defined (_PGI_) || defined (_NVC_)
          dt = fmax( fabs(U_new[OFFSET(i,j)]-U[OFFSET(i,j)]), dt);
          #else
          dt = MAX( fabs(U_new[OFFSET(i,j)]-U[OFFSET(i,j)]), dt);
