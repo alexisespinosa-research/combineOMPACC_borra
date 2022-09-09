@@ -4,3 +4,5 @@ void getAverage_acc(double * restrict U, double *restrict U_new);
 double updateT_acc(double * restrict U, double *restrict U_new,double dt_old);
 
 void loadGPU_acc(double * restrict U, double *restrict U_new);
+
+void copy2HOST_acc(double * restrict U);

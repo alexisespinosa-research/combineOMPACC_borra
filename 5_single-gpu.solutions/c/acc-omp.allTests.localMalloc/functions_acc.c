@@ -79,3 +79,10 @@ void loadGPU_acc(double *restrict U,double *restrict U_new)
    #pragma acc enter data copyin(U[:(GRIDX+2)*(GRIDY+2)]) create(U_new[:(GRIDX+2)*(GRIDY+2)])
    return;
 }
+
+// --------------------------------------------------------------------
+void copy2HOST_acc(double *restrict U)
+{
+   #pragma acc exit data copyout(U[:(GRIDX+2)*(GRIDY+2)])
+   return;
+}

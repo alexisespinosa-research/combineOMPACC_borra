@@ -21,6 +21,9 @@
 // smallest permitted change in temperature
 #define MAX_TEMP_ERROR 0.02
 
+// data to report in prints
+#define FACDATA 0.98
+
 // Global arrays
 //double *restrict T_new; // temperature grid
 //double *restrict T; // temperature grid from last iteration
@@ -54,18 +57,24 @@ int main(int argc, char *argv[]) {
     init(T);
 
     //---- Section of preloading arrays to the GPU. Default is to use OpenACC function
+    //     And for the internal preloading, decided to also use "enter data" as in functions
     #ifndef _NOPRELOAD_
        #if defined (_PRELOAD_INTERNAL_) || defined (_ALL_INTERNAL_)
           #if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
              //#pragma omp target data map(tofrom:T) map(alloc:T_new)
                      //:gcc11:fails in runtime: illegal memory access
-             #pragma omp target data map(tofrom:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
+             //#pragma omp target data map(tofrom:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
+                     //:gcc11:works
+             #pragma omp target enter data map(to:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
                      //:gcc11:works
           #else
              //#pragma acc data copy(T) create(T_new)
                      //:pgi:fails in compilation: error says "cannot determine bounds"
                      //:gcc11:fails in runtime: illegal memory access
-             #pragma acc data copy(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
+             //#pragma acc data copy(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
+                     //:pgi:works
+                     //:gcc11:works
+             #pragma acc enter data copyin(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
                      //:pgi:works
                      //:gcc11:works
           #endif
@@ -82,6 +91,9 @@ int main(int argc, char *argv[]) {
     while ( dt > MAX_TEMP_ERROR && iteration <= max_iterations ) {
     /*for ( iteration=1; iteration <=max_iterations; iteration++){
     if (dt > MAX_TEMP_ERROR) {*/
+       
+        //---- reset dt
+        dt = 0.0;
 
         //---- Average over neighbours. Default is to use OpenACC function
         #if defined (_AVERAGE_INTERNAL_) || defined (_ALL_INTERNAL_)
@@ -130,14 +142,12 @@ int main(int argc, char *argv[]) {
            getAverage_omp(T,T_new);
            #endif
         #endif
-        // reset dt
-        dt = 0.0;
-
+           
         //---- Copy T_new into T and compute largest change. Default is to use OpenMP function
         #if defined (_UPDATE_INTERNAL_) || defined (_ALL_INTERNAL_)
            #ifndef _JUSTACC_
-              //#pragma omp target map(dt)
-              //#pragma omp target map(tofrom:T,dt) map(to:T_new)
+              //#pragma omp target map(tofrom:dt)
+              //#pragma omp target map(tofrom:T) map(tofrom:dt) map(to:T_new)
               #pragma omp target map(tofrom:T[:(GRIDX+2)*(GRIDY+2)],dt) map(to:T_new[:(GRIDX+2)*(GRIDY+2)])
               #pragma omp teams distribute parallel for collapse(2) reduction(max:dt) private(i,j)
            #else
@@ -174,7 +184,8 @@ int main(int argc, char *argv[]) {
         #endif
         // periodically print largest change
         if((iteration % 100) == 0) 
-            printf("Iteration %4.0d, dt %f\n",iteration,dt);
+            printf("Iteration %4.0d, dt %f, T[Fac*GX][Fac*GY]=%f\n",iteration,dt,
+                      T[OFFSET((int)(FACDATA*(float)GRIDX),(int)(FACDATA*(float)GRIDY))]);
         
 	     iteration++;
     /*}else
@@ -182,6 +193,28 @@ int main(int argc, char *argv[]) {
        break;
     }*/
     }
+    //---- Section of final copies of arrays from the GPU to the host. Default is to use OpenMP functions
+    //---- Section for copying arrays back to host. Default is to use OpenMP
+    //     (Needed because loading functions,and decided statement in internal preload, use "enter data")
+    #ifndef _NOPRELOAD_
+       #if defined (_PRELOAD_INTERNAL_) || defined (_ALL_INTERNAL_)
+          #if defined(_JUSTACC_) || defined(_PRELOADACC_)
+             #pragma acc exit data copyout(T[:(GRIDX+2)*(GRIDY+2)])
+          #else
+             #pragma omp target exit data map(from:T[:(GRIDX+2)*(GRIDY+2)])
+          #endif
+       #else
+          #if defined(_JUSTACC_) || defined(_PRELOADACC_)
+             copy2HOST_acc(T);
+          #else
+             copy2HOST_omp(T);
+          #endif
+       #endif
+    #endif
+
+    //------ Do we have T in the host ready to be saved?
+    printf("Final values, iteration %4.0d, dt %f, T[Fac*GX][Fac*GY]=%f\n",iteration,dt,
+              T[OFFSET((int)(FACDATA*(float)GRIDX),(int)(FACDATA*(float)GRIDY))]);
 
     gettimeofday(&stop_time,NULL);
     timersub(&stop_time, &start_time, &elapsed_time); // measure time

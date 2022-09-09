@@ -444,7 +444,7 @@ laplace_acc-omp.sta.exe: laplace_acc-omp.sta.o functions_cpu.sta.o functions_omp
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
 
 #cpu
-#Bad Notes: gcc/11: Error during compilation. Can't do managed memory with gcc. But,as others, will also fail to mix.
+#Bad Notes: gcc/11: Error during compilation. Can't do managed memory with gcc. And will also fail to mix.
 .PHONY: staticManaged
 staticManaged: laplace_acc-omp.sta-man.exe
 
@@ -658,121 +658,134 @@ laplace_acc-omp.updnogpuidyn.o: laplace_acc-omp.c
 laplace_acc-omp.updnogpuidyn.exe: laplace_acc-omp.updnogpuidyn.o libfunctions_acc.so
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_acc -o $@ $<
 
+#cpu
 .PHONY: allInternalAcc
 allInternalAcc: laplace_acc.alli.exe
 
 laplace_acc.alli.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
 
-laplace_acc.alli.exe: laplace_acc.alli.o
+laplace_acc.alli.exe: laplace_acc.alli.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) -o $@ $^
 
+#cpu
 .PHONY: allInternalAccNoPreload
 allInternalAccNoPreload: laplace_acc.allinopre.exe
 
 laplace_acc.allinopre.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTACC_ -D_NOPRELOAD_ -c -o $@ $<
 
-laplace_acc.allinopre.exe: laplace_acc.allinopre.o
+laplace_acc.allinopre.exe: laplace_acc.allinopre.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) -o $@ $^
 
+#cpu
 .PHONY: allInternalAccManaged
 allInternalAccManaged: laplace_acc.alli-man.exe
 
 laplace_acc.alli-man.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
 
-laplace_acc.alli-man.exe: laplace_acc.alli-man.o
+laplace_acc.alli-man.exe: laplace_acc.alli-man.o functions_cpu.sta-man.o
 	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(MANFLAGS) -o $@ $^
 
+#cpu
 .PHONY: allInternalAccNoPreloadManaged
 allInternalAccNoPreloadManaged: laplace_acc.allinopre-man.exe
 
 laplace_acc.allinopre-man.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_ALL_INTERNAL_ -D_JUSTACC_ -D_NOPRELOAD_ -c -o $@ $<
 
-laplace_acc.allinopre-man.exe: laplace_acc.allinopre-man.o
+laplace_acc.allinopre-man.exe: laplace_acc.allinopre-man.o functions_cpu.sta-man.o
 	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(MANFLAGS) -o $@ $^
 
+#cpu
 .PHONY: allInternalOmp
 allInternalOmp: laplace_omp.alli.exe
 
 laplace_omp.alli.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTOMP_ -c -o $@ $<
 
-laplace_omp.alli.exe: laplace_omp.alli.o
+laplace_omp.alli.exe: laplace_omp.alli.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(OMPFLAGS) -o $@ $^
 
+#cpu
 .PHONY: allInternalOmpNoPreload
 allInternalOmpNoPreload: laplace_omp.allinopre.exe
 
 laplace_omp.allinopre.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTOMP_ -D_NOPRELOAD_ -c -o $@ $<
 
-laplace_omp.allinopre.exe: laplace_omp.allinopre.o
+laplace_omp.allinopre.exe: laplace_omp.allinopre.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(OMPFLAGS) -o $@ $^
 
+#cpu
 .PHONY: allInternalOmpManaged
 allInternalOmpManaged: laplace_omp.alli-man.exe
 
 laplace_omp.alli-man.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -D_JUSTOMP_ -c -o $@ $<
 
-laplace_omp.alli-man.exe: laplace_omp.alli-man.o
+laplace_omp.alli-man.exe: laplace_omp.alli-man.o functions_cpu.sta-man.o
 	$(CC) $(CFLAGS) $(LIBS) $(OMPFLAGS) $(MANFLAGSOMP) -o $@ $^
 
+#cpu
 .PHONY: allInternalOmpNoPreloadManaged
 allInternalOmpNoPreloadManaged: laplace_omp.allinopre-man.exe
 
 laplace_omp.allinopre-man.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -D_JUSTOMP_ -D_NOPRELOAD_ -c -o $@ $<
 
-laplace_omp.allinopre-man.exe: laplace_omp.allinopre-man.o
+laplace_omp.allinopre-man.exe: laplace_omp.allinopre-man.o functions_cpu.sta-man.o
 	$(CC) $(CFLAGS) $(LIBS) $(OMPFLAGS) $(MANFLAGSOMP) -o $@ $^
 
+#cpu
 .PHONY: allInternal
 allInternal: laplace_acc-omp.alli.exe
 
 laplace_acc-omp.alli.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c -o $@ $<
 
-laplace_acc-omp.alli.exe: laplace_acc-omp.alli.o
+laplace_acc-omp.alli.exe: laplace_acc-omp.alli.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
 
+#cpu
 .PHONY: allInternalManaged
 allInternalManaged: laplace_acc-omp.alli-man.exe
 
 laplace_acc-omp.alli-man.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -c -o $@ $<
 
-laplace_acc-omp.alli-man.exe: laplace_acc-omp.alli-man.o
+laplace_acc-omp.alli-man.exe: laplace_acc-omp.alli-man.o functions_cpu.sta-man.o
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) $(MANFLAGSOMP) -o $@ $^
 
+#cpu
 .PHONY: allInternalNoPreload
 allInternalNoPreload: laplace_acc-omp.allinopre.exe
 
 laplace_acc-omp.allinopre.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_NOPRELOAD_ -c -o $@ $<
 
-laplace_acc-omp.allinopre.exe: laplace_acc-omp.allinopre.o
+laplace_acc-omp.allinopre.exe: laplace_acc-omp.allinopre.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
 
+#cpu
 .PHONY: allInternalNoPreloadManaged
 allInternalNoPreloadManaged: laplace_acc-omp.allinopre-man.exe
 
 laplace_acc-omp.allinopre-man.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -D_NOPRELOAD_ -c -o $@ $<
 
-laplace_acc-omp.allinopre-man.exe: laplace_acc-omp.allinopre-man.o
+laplace_acc-omp.allinopre-man.exe: laplace_acc-omp.allinopre-man.o functions_cpu.sta-man.o
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) $(MANFLAGSOMP) -o $@ $^
 
+#cpu
 .PHONY: allInternalNoGPU
 allInternalNoGPU: laplace_acc-omp.allinogpu.exe
 
 laplace_acc-omp.allinogpu.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c -o $@ $<
 
-laplace_acc-omp.allinogpu.exe: laplace_acc-omp.allinogpu.o
+laplace_acc-omp.allinogpu.exe: laplace_acc-omp.allinogpu.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(COMPILER_TAG) -o $@ $^
 
 .PHONY: cleanAll

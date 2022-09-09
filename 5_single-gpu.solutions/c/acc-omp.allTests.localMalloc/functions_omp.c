@@ -63,3 +63,12 @@ void loadGPU_omp(double *restrict U,double *restrict U_new)
 
    return;
 }
+
+// --------------------------------------------------------------------
+void copy2HOST_omp(double *restrict U)
+{
+   #pragma omp target exit data \
+               map(from:U[:(GRIDX+2)*(GRIDY+2)]) 
+
+   return;
+}
