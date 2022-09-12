@@ -1,8 +1,13 @@
 # --------------------
 # reset this from the command line for easier making of other test code:
-CLUSTER=topaz
-VENDOR=gnu
+#CLUSTER=topaz
+#CLUSTER=mulan
+CLUSTER=lumi
+
+#VENDOR=gnu
 #VENDOR=nvhpc
+VENDOR=cray
+
 SURNAME=singleTargetBasic
 
 # --------------------
@@ -70,6 +75,38 @@ ifeq ($(CLUSTER),mulan)
 		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
 		EXEFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_CRAY_
+	endif
+endif
+
+# --------------------
+#  Specific settings for lumi
+ifeq ($(CLUSTER),lumi)
+	GPU_ARCH=gfx90a
+	ifeq ($(VENDOR),cray)
+		CC=cc
+		FC=ftn
+		OMPFLAGS=-homp
+		ACCFLAGS=-hacc
+		MANFLAGS=
+		MANFLAGSOMP=
+		STALIBFLAGS=
+		DYNLIBFLAGS=-shared -fPIC
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS) -L$(ROCM_PATH)/lib -lamdhip64
+		COMPILER_TAG=-D_CRAY_
+	endif
+	ifeq ($(VENDOR),gnu)
+		CC=cc
+		FC=ftn
+		OMPFLAGS=-fopenmp  --rocm-path=$(ROCM_PATH) --offload-arch=$(GPU_ARCH)
+		ACCFLAGS=-fopenacc --rocm-path=$(ROCM_PATH) --offload-arch=$(GPU_ARCH)
+		MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
+		MANFLAGSOMP=
+		STALIBFLAGS=
+		DYNLIBFLAGS=-shared -fPIC
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS) --rocm-path=$(ROCM_PATH) -L$(ROCM_PATH)/lib -lamdhip64
+		COMPILER_TAG=-D_GNU_
 	endif
 endif
 
@@ -603,6 +640,21 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
 ##!##	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(STALIBFLAGS) -o $@ $^
 
+#cpu
+.PHONY: accStatic
+mixHere=acc
+tagHere=$(CLUSTER).$(VENDOR).$(FC).static
+tagSta=$(tagF).static
+
+accStatic: laplace_$(mixHere).$(tagHere).exe
+
+laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
+	$(FC) $(FFLAGS) $(ACCFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -c $< -o $@
+
+laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
+	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(STALIBFLAGS) $^ -o $@
+
+
 ##!##.PHONY: accStaticManaged
 ##!##accStaticManaged: laplace_acc.staticManaged.exe
 ##!##
@@ -630,47 +682,41 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##laplace_acc.stanopre-man.exe: laplace_acc.stanopre-man.o functions_acc.staticManaged.o
 ##!##	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(STALIBFLAGS) $(MANFLAGS) -o $@ $^
 ##!##
+
+#cpu
 .PHONY: ompStatic
 mixHere=omp
-tagHere=$(CLUSTER).$(VENDOR).$(FC).ompStatic
+tagHere=$(CLUSTER).$(VENDOR).$(FC).static
+tagSta=$(tagF).static
 
 ompStatic: laplace_$(mixHere).$(tagHere).exe
 
-globals.$(tagHere).o: globals.F90
-	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTOMP_ -c -o $*.o $<
+laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.o
+	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTOMP_ -c $< -o $@
 
-functions_omp.$(tagHere).o: functions_omp.F90 globals.$(tagHere).o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTOMP_ -c -o $*.o $<
+laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.o
+	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(STALIBFLAGS) $^ -o $@
 
-functions_omp--sub.$(tagHere).o: functions_omp--sub.F90 globals.$(tagHere).o functions_omp.$(tagHere).o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTOMP_ -c -o $*.o $<
-
-laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.$(tagHere).o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTOMP_ -c -o $@ $<
-
-laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.$(tagHere).o
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(STALIBFLAGS) -o $@ $^
-
-.PHONY: ompStaticManaged
-mixHere=omp
-tagHere=staticManaged
-
-ompStaticManaged: laplace_$(mixHere).$(tagHere).exe
-
-globals.$(tagHere).o: globals.F90
-	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $*.o $<
-
-functions_omp.$(tagHere).o: functions_omp.F90 globals.$(tagHere).o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $*.o $<
-
-functions_omp--sub.$(tagHere).o: functions_omp--sub.F90 globals.$(tagHere).o functions_omp.$(tagHere).o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $*.o $<
-
-laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.$(tagHere).o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $@ $<
-
-laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.$(tagHere).o
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(STALIBFLAGS) $(MANFLAGSOMP) -o $@ $^
+##!##.PHONY: ompStaticManaged
+##!##mixHere=omp
+##!##tagHere=staticManaged
+##!##
+##!##ompStaticManaged: laplace_$(mixHere).$(tagHere).exe
+##!##
+##!##globals.$(tagHere).o: globals.F90
+##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $*.o $<
+##!##
+##!##functions_omp.$(tagHere).o: functions_omp.F90 globals.$(tagHere).o
+##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $*.o $<
+##!##
+##!##functions_omp--sub.$(tagHere).o: functions_omp--sub.F90 globals.$(tagHere).o functions_omp.$(tagHere).o
+##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $*.o $<
+##!##
+##!##laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.$(tagHere).o
+##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $@ $<
+##!##
+##!##laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.$(tagHere).o
+##!##	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(STALIBFLAGS) $(MANFLAGSOMP) -o $@ $^
 
 ##!##.PHONY: ompStaticNoPreload
 ##!##ompStaticNoPreload: laplace_omp.stanopre.exe
@@ -857,15 +903,20 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
 	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(MANFLAGSOMP) $^ -o $@
 
-##!##.PHONY: allInternal
-##!##allInternal: laplace_acc-omp.alli.exe
-##!##
-##!##laplace_acc-omp.alli.o: laplace_acc-omp.F90
-##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c -o $@ $<
-##!##
-##!##laplace_acc-omp.alli.exe: laplace_acc-omp.alli.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
-##!##
+#cpu
+.PHONY: allInternal
+mixHere=acc-omp
+tagHere=$(tagF).allInternal
+tagSta=$(tagF).static
+
+allInternal: laplace_$(mixHere).$(tagHere).exe
+
+laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
+	$(FC) $(FFLAGS) $(OMPFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c $< -o $@
+
+laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
+	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(ACCFLAGS) $^ -o $@
+
 ##!##.PHONY: allInternalManaged
 ##!##allInternalManaged: laplace_acc-omp.alli-man.exe
 ##!##

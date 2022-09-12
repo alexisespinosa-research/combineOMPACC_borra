@@ -3,6 +3,7 @@
 *.o
 *.mod
 *.smod
+*.s
 *.swp
 core.*
 *.DS_Store

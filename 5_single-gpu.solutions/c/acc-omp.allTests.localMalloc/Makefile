@@ -1,10 +1,14 @@
-cluster=topaz
+#cluster=topaz
 #cluster=mulan
+cluster=lumi
 
-compiler=gcc
+#compiler=gcc
 #compiler=pgcc
 #compiler=nvc
+#compiler=clang
 #compiler=prg-gnu
+compiler=prg-cray
+#compiler=prg-aocc
 
 CFLAGS=-O3
 
@@ -16,6 +20,11 @@ ifeq ($(cluster),mulan)
 	GPU_ARCH= #GPU settings are automatic with: "module load craype-accel-amd-gfx908 rocm" 
 	GPU_TARGETS= #GPU settings are automatic with: "module load craype-accel-amd-gfx908 rocm" 
 endif
+ifeq ($(cluster),lumi)
+	GPU_ARCH= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
+	GPU_TARGETS= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
+endif
+
 
 ifeq ($(compiler),gcc)
 	CC=$(compiler)
@@ -84,7 +93,7 @@ ifeq ($(compiler),prg-cray)
 	CC=cc
 	LIBS=-lm
 	OMPFLAGS=-fopenmp
-	ACCFLAGS=-fopenacc
+	ACCFLAGS=-hacc
 	MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
 	MANFLAGSOMP=
 	STALIBFLAGS=
