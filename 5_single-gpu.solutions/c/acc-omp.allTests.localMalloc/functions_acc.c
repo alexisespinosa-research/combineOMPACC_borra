@@ -81,8 +81,9 @@ void loadGPU_acc(double *restrict U,double *restrict U_new)
 }
 
 // --------------------------------------------------------------------
-void copy2HOST_acc(double *restrict U)
+void copy2HOST_acc(double *restrict U,double *restrict U_new)
 {
    #pragma acc exit data copyout(U[:(GRIDX+2)*(GRIDY+2)])
+   #pragma acc exit data delete(U,U_new)
    return;
 }

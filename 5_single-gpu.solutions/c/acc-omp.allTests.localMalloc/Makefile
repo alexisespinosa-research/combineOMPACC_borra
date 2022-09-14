@@ -93,7 +93,7 @@ ifeq ($(compiler),prg-cray)
 	CC=cc
 	LIBS=-lm
 	OMPFLAGS=-fopenmp
-	ACCFLAGS=-hacc
+	ACCFLAGS=-fopenacc #OpenACC does not work on clang-cray compiler
 	MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
 	MANFLAGSOMP=
 	STALIBFLAGS=
@@ -171,7 +171,16 @@ laplace_acc-omp.dynaccpre.exe: laplace_acc-omp.dynaccpre.o libfunctions_cpu.so l
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_cpu -lfunctions_omp -lfunctions_acc -o $@ $<
 
 #cpu
-#Bad Notes: gcc/11:runtime error: libgomp: device already active
+.PHONY: dynamicAccPreloadStructured
+dynamicAccPreloadStructured: laplace_acc-omp.dynaccpre-str.exe libfunctions_cpu.so libfunctions_omp.so libfunctions_acc.so 
+
+laplace_acc-omp.dynaccpre-str.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(COMPILER_TAG) $(ACCFLAGS) -D_PRELOAD_STRUCTURED_ -D_PRELOADACC_ -c -o $@ $<
+
+laplace_acc-omp.dynaccpre-str.exe: laplace_acc-omp.dynaccpre-str.o libfunctions_cpu.so libfunctions_omp.so libfunctions_acc.so
+	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_cpu -lfunctions_omp -lfunctions_acc -o $@ $<
+
+#cpu
 .PHONY: dynamicOmpPreload
 dynamicOmpPreload: laplace_acc-omp.dynomppre.exe libfunctions_cpu.so libfunctions_omp.so libfunctions_acc.so 
 
@@ -179,6 +188,16 @@ laplace_acc-omp.dynomppre.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(COMPILER_TAG) -D_PRELOADOMP_ -c -o $@ $<
 
 laplace_acc-omp.dynomppre.exe: laplace_acc-omp.dynomppre.o libfunctions_cpu.so libfunctions_omp.so libfunctions_acc.so
+	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_cpu -lfunctions_omp -lfunctions_acc -o $@ $<
+
+#cpu
+.PHONY: dynamicOmpPreloadStructured
+dynamicOmpPreloadStructured: laplace_acc-omp.dynomppre-str.exe libfunctions_cpu.so libfunctions_omp.so libfunctions_acc.so 
+
+laplace_acc-omp.dynomppre-str.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(COMPILER_TAG) $(OMPFLAGS) -D_PRELOAD_STRUCTURED_ -D_PRELOADOMP_ -c -o $@ $<
+
+laplace_acc-omp.dynomppre-str.exe: laplace_acc-omp.dynomppre-str.o libfunctions_cpu.so libfunctions_omp.so libfunctions_acc.so
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_cpu -lfunctions_omp -lfunctions_acc -o $@ $<
 
 #cpu
@@ -672,9 +691,19 @@ laplace_acc-omp.updnogpuidyn.exe: laplace_acc-omp.updnogpuidyn.o libfunctions_ac
 allInternalAcc: laplace_acc.alli.exe
 
 laplace_acc.alli.o: laplace_acc-omp.c
-	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
 
 laplace_acc.alli.exe: laplace_acc.alli.o functions_cpu.sta.o
+	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) -o $@ $^
+
+#cpu
+.PHONY: allInternalAccPreloadStructured
+allInternalAccPreloadStructured: laplace_acc.alli-str.exe
+
+laplace_acc.alli-str.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_STRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
+
+laplace_acc.alli-str.exe: laplace_acc.alli-str.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) -o $@ $^
 
 #cpu
@@ -692,7 +721,7 @@ laplace_acc.allinopre.exe: laplace_acc.allinopre.o functions_cpu.sta.o
 allInternalAccManaged: laplace_acc.alli-man.exe
 
 laplace_acc.alli-man.o: laplace_acc-omp.c
-	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
 
 laplace_acc.alli-man.exe: laplace_acc.alli-man.o functions_cpu.sta-man.o
 	$(CC) $(CFLAGS) $(LIBS) $(ACCFLAGS) $(MANFLAGS) -o $@ $^
@@ -712,9 +741,19 @@ laplace_acc.allinopre-man.exe: laplace_acc.allinopre-man.o functions_cpu.sta-man
 allInternalOmp: laplace_omp.alli.exe
 
 laplace_omp.alli.o: laplace_acc-omp.c
-	$(CC) $(CFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTOMP_ -c -o $@ $<
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTOMP_ -c -o $@ $<
 
 laplace_omp.alli.exe: laplace_omp.alli.o functions_cpu.sta.o
+	$(CC) $(CFLAGS) $(LIBS) $(OMPFLAGS) -o $@ $^
+
+#cpu
+.PHONY: allInternalOmpPreloadStructured
+allInternalOmpPreloadStructured: laplace_omp.alli-str.exe
+
+laplace_omp.alli-str.o: laplace_acc-omp.c
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOAD_STRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTOMP_ -c -o $@ $<
+
+laplace_omp.alli-str.exe: laplace_omp.alli-str.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(OMPFLAGS) -o $@ $^
 
 #cpu
@@ -732,7 +771,7 @@ laplace_omp.allinopre.exe: laplace_omp.allinopre.o functions_cpu.sta.o
 allInternalOmpManaged: laplace_omp.alli-man.exe
 
 laplace_omp.alli-man.o: laplace_acc-omp.c
-	$(CC) $(CFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -D_JUSTOMP_ -c -o $@ $<
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTOMP_ -c -o $@ $<
 
 laplace_omp.alli-man.exe: laplace_omp.alli-man.o functions_cpu.sta-man.o
 	$(CC) $(CFLAGS) $(LIBS) $(OMPFLAGS) $(MANFLAGSOMP) -o $@ $^
@@ -752,7 +791,7 @@ laplace_omp.allinopre-man.exe: laplace_omp.allinopre-man.o functions_cpu.sta-man
 allInternal: laplace_acc-omp.alli.exe
 
 laplace_acc-omp.alli.o: laplace_acc-omp.c
-	$(CC) $(CFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c -o $@ $<
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -c -o $@ $<
 
 laplace_acc-omp.alli.exe: laplace_acc-omp.alli.o functions_cpu.sta.o
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
@@ -762,7 +801,7 @@ laplace_acc-omp.alli.exe: laplace_acc-omp.alli.o functions_cpu.sta.o
 allInternalManaged: laplace_acc-omp.alli-man.exe
 
 laplace_acc-omp.alli-man.o: laplace_acc-omp.c
-	$(CC) $(CFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -c -o $@ $<
+	$(CC) $(CFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -c -o $@ $<
 
 laplace_acc-omp.alli-man.exe: laplace_acc-omp.alli-man.o functions_cpu.sta-man.o
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) $(MANFLAGSOMP) -o $@ $^

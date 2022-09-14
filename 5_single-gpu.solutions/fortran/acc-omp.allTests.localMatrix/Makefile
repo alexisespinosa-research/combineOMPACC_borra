@@ -92,20 +92,20 @@ ifeq ($(CLUSTER),lumi)
 		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
 		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS) -L$(ROCM_PATH)/lib -lamdhip64
+		EXEFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_CRAY_
 	endif
 	ifeq ($(VENDOR),gnu)
 		CC=cc
 		FC=ftn
-		OMPFLAGS=-fopenmp  --rocm-path=$(ROCM_PATH) --offload-arch=$(GPU_ARCH)
-		ACCFLAGS=-fopenacc --rocm-path=$(ROCM_PATH) --offload-arch=$(GPU_ARCH)
+		OMPFLAGS=-fopenmp
+		ACCFLAGS=-fopenacc
 		MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
 		MANFLAGSOMP=
 		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
 		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS) --rocm-path=$(ROCM_PATH) -L$(ROCM_PATH)/lib -lamdhip64
+		EXEFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_GNU_
 	endif
 endif
@@ -806,7 +806,21 @@ tagSta=$(tagF).static
 allInternalAcc: laplace_$(mixHere).$(tagHere).exe
 
 laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTACC_ -c $< -o $@
+	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTACC_ -c $< -o $@
+
+laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
+	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $^ -o $@
+
+#cpu
+.PHONY: allInternalAccPreloadStructured
+mixHere=acc
+tagHere=$(tagF).allInternalPreStr
+tagSta=$(tagF).static
+
+allInternalAccPreloadStructured: laplace_$(mixHere).$(tagHere).exe
+
+laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
+	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_STRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTACC_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
 	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $^ -o $@
@@ -859,7 +873,21 @@ tagSta=$(tagF).static
 allInternalOmp: laplace_$(mixHere).$(tagHere).exe
 
 laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTOMP_ -c $< -o $@
+	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTOMP_ -c $< -o $@
+
+laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
+	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $^ -o $@
+
+#cpu
+.PHONY: allInternalOmpPreloadStructured
+mixHere=omp
+tagHere=$(tagF).allInternalOmpPreStr
+tagSta=$(tagF).static
+
+allInternalOmpPreloadStructured: laplace_$(mixHere).$(tagHere).exe
+
+laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
+	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOAD_STRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTOMP_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
 	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $^ -o $@
@@ -912,7 +940,7 @@ tagSta=$(tagF).static
 allInternal: laplace_$(mixHere).$(tagHere).exe
 
 laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c $< -o $@
+	$(FC) $(FFLAGS) $(OMPFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
 	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(ACCFLAGS) $^ -o $@

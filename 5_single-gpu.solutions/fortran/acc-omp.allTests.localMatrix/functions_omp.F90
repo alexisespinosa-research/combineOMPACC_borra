@@ -30,9 +30,10 @@
 ! ----------------------------------
 
 ! ----------------------------------
-        module subroutine copy2HOST_omp(U)
+        module subroutine copy2HOST_omp(U,U_new)
           implicit none
           double precision, intent(inout) :: U(:,:)
+          double precision, intent(inout) :: U_new(:,:)
         end subroutine copy2HOST_omp
 ! ----------------------------------
 

@@ -46,13 +46,21 @@
 !           both as function and internal
 !           Using "enter data" both in functions and internal pragmas
 #      ifndef _NOPRELOAD_
-#         if defined (_PRELOAD_INTERNAL_) || defined (_ALL_INTERNAL_)
+#         if defined (_PRELOAD_UNSTRUCTURED_) && defined (_ALL_INTERNAL_)
 #            if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
 !$omp           target enter data map(to:T) map(alloc:T_new)
 !$aeg-omp           target enter data map(to:T(:GRIDX+2,:GRIDY+2)) map(alloc:T_new(:GRIDX+2,:GRIDY+2))
 #            else
 !$acc           enter data copyin(T) create(T_new)
 !$aeg-acc           enter data copyin(T(:GRIDX+2,:GRIDY+2)) create(T_new(:GRIDX+2,:GRIDY+2))
+#            endif
+#         elif defined (_PRELOAD_STRUCTURED_) && defined (_ALL_INTERNAL_)
+#            if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
+!$omp           target data map(to:T) map(alloc:T_new)
+!$aeg-omp           target data map(to:T(:GRIDX+2,:GRIDY+2)) map(alloc:T_new(:GRIDX+2,:GRIDY+2))
+#            else
+!$acc           data copyin(T) create(T_new)
+!$aeg-acc           data copyin(T(:GRIDX+2,:GRIDY+2)) create(T_new(:GRIDX+2,:GRIDY+2))
 #            endif
 #         else
 #            if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
@@ -141,20 +149,31 @@
 !----- Final copies of arrays from the GPU. Default is to use OpenMP,
 !      both as function and internal
 !      Using "enter data" both in functions and internal pragmas
+!      OpenACC is used as default only for the STRUCTURED case where
+!      "end data" closing pragmas need to conincide with the opening
+!      ones before the while loop
 #      ifndef _NOPRELOAD_
-#         if defined (_PRELOAD_INTERNAL_) || defined (_ALL_INTERNAL_)
+#         if defined (_PRELOAD_UNSTRUCTURED_) && defined (_ALL_INTERNAL_)
 #            if defined(_JUSTACC_) || defined(_PRELOADACC_)
-!$acc           exit data copyout(T)
 !$aeg-acc           exit data copyout(T(:GRIDX+2,:GRIDY+2))
+!$acc           exit data copyout(T)
+!$acc           exit data delete(T,T_new)
 #            else
-!$omp           target exit data map(from:T)
 !$aeg-omp           target exit data map(from:T(:GRIDX+2,:GRIDY+2))
+!$omp           target exit data map(from:T)
+!$omp           target exit data map(delete:T,T_new)
+#            endif
+#         elif defined (_PRELOAD_STRUCTURED_) && defined (_ALL_INTERNAL_)
+#            if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
+!$omp           end target data
+#            else
+!$acc           end data
 #            endif
 #         else
 #            if defined(_JUSTACC_) || defined(_PRELOADACC_)
-                call copy2HOST_acc(T)
+                call copy2HOST_acc(T,T_new)
 #            else
-                call copy2HOST_omp(T) 
+                call copy2HOST_omp(T,T_new) 
 #            endif
 #         endif
 #      endif

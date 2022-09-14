@@ -59,22 +59,26 @@ int main(int argc, char *argv[]) {
     //---- Section of preloading arrays to the GPU. Default is to use OpenACC function
     //     And for the internal preloading, decided to also use "enter data" as in functions
     #ifndef _NOPRELOAD_
-       #if defined (_PRELOAD_INTERNAL_) || defined (_ALL_INTERNAL_)
+       #if defined (_PRELOAD_UNSTRUCTURED_) && defined (_ALL_INTERNAL_)
+          #if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
+             #pragma omp target enter data map(to:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
+                     //:gcc11:works
+          #else
+             #pragma acc enter data copyin(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
+                     //:pgi:works
+                     //:gcc11:works
+          #endif
+       #elif defined (_PRELOAD_STRUCTURED_) && defined (_ALL_INTERNAL_)
           #if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
              //#pragma omp target data map(tofrom:T) map(alloc:T_new)
                      //:gcc11:fails in runtime: illegal memory access
-             //#pragma omp target data map(tofrom:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
-                     //:gcc11:works
-             #pragma omp target enter data map(to:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
+             #pragma omp target data map(tofrom:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
                      //:gcc11:works
           #else
              //#pragma acc data copy(T) create(T_new)
                      //:pgi:fails in compilation: error says "cannot determine bounds"
                      //:gcc11:fails in runtime: illegal memory access
-             //#pragma acc data copy(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
-                     //:pgi:works
-                     //:gcc11:works
-             #pragma acc enter data copyin(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
+             #pragma acc data copy(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
                      //:pgi:works
                      //:gcc11:works
           #endif
@@ -193,21 +197,29 @@ int main(int argc, char *argv[]) {
        break;
     }*/
     }
-    //---- Section of final copies of arrays from the GPU to the host. Default is to use OpenMP functions
-    //---- Section for copying arrays back to host. Default is to use OpenMP
+    //---- Section for copying arrays back to host. Default is to use OpenMP except when STRUCTURED,
+    //     where end is implicit at the end of the while loop (c logic)
     //     (Needed because loading functions,and decided statement in internal preload, use "enter data")
     #ifndef _NOPRELOAD_
-       #if defined (_PRELOAD_INTERNAL_) || defined (_ALL_INTERNAL_)
+       #if defined (_PRELOAD_UNSTRUCTURED_) && defined (_ALL_INTERNAL_)
           #if defined(_JUSTACC_) || defined(_PRELOADACC_)
              #pragma acc exit data copyout(T[:(GRIDX+2)*(GRIDY+2)])
+             #pragma acc exit data delete(T,T_new)
           #else
              #pragma omp target exit data map(from:T[:(GRIDX+2)*(GRIDY+2)])
+             #pragma omp target exit data map(delete:T,T_new)
+          #endif
+       #elif defined (_PRELOAD_STRUCTURED_) && defined (_ALL_INTERNAL_)
+          #if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
+             //#pragma omp end target data //Not needed in c
+          #else
+             //#pragma acc end data //Not needed in c
           #endif
        #else
           #if defined(_JUSTACC_) || defined(_PRELOADACC_)
-             copy2HOST_acc(T);
+             copy2HOST_acc(T,T_new);
           #else
-             copy2HOST_omp(T);
+             copy2HOST_omp(T,T_new);
           #endif
        #endif
     #endif

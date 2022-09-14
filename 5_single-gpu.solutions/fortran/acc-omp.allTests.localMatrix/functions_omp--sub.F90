@@ -48,6 +48,7 @@
 ! ----------------------------------
          module procedure copy2HOST_omp
 !$omp       target exit data map(from:U)
+!$omp       target exit data map(delete:U,U_new)
          end procedure copy2HOST_omp
 ! ----------------------------------
       end submodule sub
