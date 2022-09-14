@@ -12,6 +12,9 @@
 // smallest permitted change in temperature
 #define MAX_TEMP_ERROR 0.02
 
+// Factor in the GRID for data to report in prints
+#define FACDATA 0.98
+
 double T_new[GRIDX+2][GRIDY+2]; // temperature grid
 double T[GRIDX+2][GRIDY+2];     // temperature grid from last iteration
 
@@ -66,10 +69,15 @@ int main(int argc, char *argv[]) {
 
         // periodically print largest change
         if((iteration % 100) == 0) 
-            printf("Iteration %4.0d, dt %f\n",iteration,dt);
-        
+            printf("Iteration %4.0d, dt %f, T[Fac*GX][Fac*GY]=%f\n",iteration,dt,
+                    T[(int)(FACDATA*(float)GRIDX)][(int)(FACDATA*(float)GRIDY)]);        
+
 	     iteration++;
     }
+
+    //------ Do we have T in the host ready to be saved?
+    printf("Final values, iteration %4.0d, dt %f, T[Fac*GX][Fac*GY]=%f\n",iteration,dt,
+              T[(int)(FACDATA*(float)GRIDX)][(int)(FACDATA*(float)GRIDY)]);
 
     gettimeofday(&stop_time,NULL);
     timersub(&stop_time, &start_time, &elapsed_time); // measure time

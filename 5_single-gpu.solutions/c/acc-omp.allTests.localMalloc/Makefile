@@ -25,7 +25,6 @@ ifeq ($(cluster),lumi)
 	GPU_TARGETS= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
 endif
 
-
 ifeq ($(compiler),gcc)
 	CC=$(compiler)
 	LIBS=
