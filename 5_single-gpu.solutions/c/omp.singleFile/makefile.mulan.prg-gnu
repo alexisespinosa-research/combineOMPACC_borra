@@ -1,10 +1,10 @@
-CC=clang
-CFLAGS=-O3 -g -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda
-LIBS=-lm
-COMPILER_TAG=-D_CLANG_
+CC=cc
+CFLAGS=-O3 -fopenmp
+LIBS=
+COMPILER_TAG=-D_GCC_
 SURNAME=twoTargetsBasic
-OBJ=laplace_mp.$(SURNAME).o
-TARGET=laplace_mp.$(SURNAME).exe
+OBJ=laplace_omp.$(SURNAME).o
+TARGET=laplace_omp.$(SURNAME).exe
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(COMPILER_TAG) -c -o $@ $<

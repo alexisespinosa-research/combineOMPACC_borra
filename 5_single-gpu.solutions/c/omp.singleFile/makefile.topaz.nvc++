@@ -1,10 +1,10 @@
-CC=gcc
-CFLAGS=-O3 -fopenmp
+CC=nvc++
+CFLAGS=-O3 -mp=gpu -Minfo=mp
 LIBS=
-COMPILER_TAG=-D_GCC_
+COMPILER_TAG=-D_NVC_
 SURNAME=twoTargetsBasic
-OBJ=laplace_mp.$(SURNAME).o
-TARGET=laplace_mp.$(SURNAME).exe
+OBJ=laplace_omp.$(SURNAME).o
+TARGET=laplace_omp.$(SURNAME).exe
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(COMPILER_TAG) -c -o $@ $<
