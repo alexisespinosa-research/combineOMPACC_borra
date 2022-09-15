@@ -57,18 +57,14 @@ double updateT_omp(double *restrict U, double *restrict U_new,double dt_old)
 // --------------------------------------------------------------------
 void loadGPU_omp(double *restrict U,double *restrict U_new)
 {
-   #pragma omp target enter data \
-               map(to:U[:(GRIDX+2)*(GRIDY+2)]) \
-               map(alloc:U_new[:(GRIDX+2)*(GRIDY+2)])
-
+   #pragma omp target enter data map(to:U[:(GRIDX+2)*(GRIDY+2)]) map(alloc:U_new[:(GRIDX+2)*(GRIDY+2)])
    return;
 }
 
 // --------------------------------------------------------------------
-void copy2HOST_omp(double *restrict U)
+void copy2HOST_omp(double *restrict U,double *restrict U_new)
 {
-   #pragma omp target exit data \
-               map(from:U[:(GRIDX+2)*(GRIDY+2)]) 
-
+   #pragma omp target exit data map(from:U[:(GRIDX+2)*(GRIDY+2)]) 
+   #pragma omp target exit data map(delete:U,U_new) 
    return;
 }

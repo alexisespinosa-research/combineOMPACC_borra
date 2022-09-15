@@ -25,8 +25,8 @@
 #define FACDATA 0.98
 
 // Global arrays
-//double *restrict T_new; // temperature grid
-//double *restrict T; // temperature grid from last iteration
+// //double T_new[GRIDX+2][GRIDY+2]; // temperature grid
+// //double T[GRIDX+2][GRIDY+2];     // temperature grid from last iteration
 
 int main(int argc, char *argv[]) {
 
@@ -35,13 +35,8 @@ int main(int argc, char *argv[]) {
     int iteration=1;                                     // iteration
     double dt=100;                                       // largest change in temperature
     struct timeval start_time, stop_time, elapsed_time;  // timers
-
-    //----Restricted pointers are easier for managed memory for the compilers:
-    double *restrict T_new=(double*)malloc(sizeof(double)*(GRIDX+2)*(GRIDY+2)); // temperature grid
-    double *restrict T=(double*)malloc(sizeof(double)*(GRIDX+2)*(GRIDY+2)); // temperature grid from last iteration
-    //----Use of normal pointers:
-    //double *T_new=(double*)malloc(sizeof(double)*(GRIDX+2)*(GRIDY+2)); // temperature grid
-    //double *T=(double*)malloc(sizeof(double)*(GRIDX+2)*(GRIDY+2)); // temperature grid from last iteration
+    double T_new[GRIDX+2][GRIDY+2]; // temperature grid
+    double T[GRIDX+2][GRIDY+2];     // temperature grid from last iteration
 
 
     if(argc!=2) {
@@ -59,24 +54,19 @@ int main(int argc, char *argv[]) {
     //---- Section of preloading arrays to the GPU. Default is to use OpenACC function
     //     And for the internal preloading, decided to also use "enter data" as in functions
     #ifndef _NOPRELOAD_
-       #if defined (_PRELOAD_INTERNAL_) || defined (_ALL_INTERNAL_)
+       #if defined (_PRELOAD_UNSTRUCTURED_) && defined (_ALL_INTERNAL_)
+          #if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
+             #pragma omp target enter data map(to:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
+          #else
+             #pragma acc enter data copyin(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
+          #endif
+       #elif defined (_PRELOAD_STRUCTURED_) && defined (_ALL_INTERNAL_)
           #if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
              //#pragma omp target data map(tofrom:T) map(alloc:T_new)
-                     //:gcc11:fails in runtime: illegal memory access
-             //#pragma omp target data map(tofrom:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
-                     //:gcc11:works
-             #pragma omp target enter data map(to:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
-                     //:gcc11:works
+             #pragma omp target data map(tofrom:T[:(GRIDX+2)*(GRIDY+2)]) map(alloc:T_new[:(GRIDX+2)*(GRIDY+2)])
           #else
              //#pragma acc data copy(T) create(T_new)
-                     //:pgi:fails in compilation: error says "cannot determine bounds"
-                     //:gcc11:fails in runtime: illegal memory access
-             //#pragma acc data copy(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
-                     //:pgi:works
-                     //:gcc11:works
-             #pragma acc enter data copyin(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
-                     //:pgi:works
-                     //:gcc11:works
+             #pragma acc data copy(T[:(GRIDX+2)*(GRIDY+2)]) create(T_new[:(GRIDX+2)*(GRIDY+2)])
           #endif
        #else
           #if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
@@ -100,32 +90,16 @@ int main(int argc, char *argv[]) {
            #ifndef _JUSTOMP_
               //#pragma acc kernels
               //   #pragma acc loop independent //together with kernels above
-                   //:pgi:justacc:(internal):works (fast:only copies data outside the while when preloaded)
               //#pragma acc parallel loop collapse(2)
-                   //:pgi:justacc:(internal):works (fast:only copies data outside the while when preloaded)
-                   //:gcc11:justacc:(internal):works (fast:only copies data outside the while when preloaded)
               //#pragma acc parallel loop copyin(T) copyout(T_new) collapse(2)
-                   //:pgi:justacc:(internal):works (fast:only copies data outside the while when preloaded)
-                   //:gcc11:justacc:(internal):fails at runtime:illegal memory access
               #pragma acc parallel loop copyin(T[:(GRIDX+2)*(GRIDY+2)]) copyout(T_new[:(GRIDX+2)*(GRIDY+2)]) collapse(2)
-                   //:pgi:justacc:(internal):works (fast:only copies data outside the while when preloaded)
-                   //:gcc11:justacc:(internal):works (fast:only copies data outside the while when preloaded)
               //#pragma acc parallel loop pcopyin(T[:(GRIDX+2)*(GRIDY+2)]) pcopyout(T_new[:(GRIDX+2)*(GRIDY+2)]) collapse(2)
-                   //:pgi:justacc:(internal):works (fast:only copies data outside the while when preloaded)
-                   //:gcc11:justacc:(internal):works (fast:only copies data outside the while when preloaded)
               //#pragma acc parallel loop present(T) present(T_new) collapse(2)
-                   //:pgi:justacc:(internal):works (fast:only copies data outside the while when preloaded)
-                   //:gcc11:justacc:(internal):fails at runtime:present clause error
               //#pragma acc parallel loop present(T[:(GRIDX+2)*(GRIDY+2)]) present(T_new[:(GRIDX+2)*(GRIDY+2)]) collapse(2)
-                   //:pgi:justacc:(internal):works (fast:only copies data outside the while when preloaded)
-                   //:gcc11:justacc:(internal):works (fast:only copies data outside the while when preloaded)
            #else
               //#pragma omp target
-                   //:gcc11:justomp:(internal):works (fast:only copies data outside the while when preloaded)
               //#pragma omp target map(to:T) map(from:T_new)
-                   //:gcc11:justomp:(internal):fails at execution time: illegal memory access
               #pragma omp target map(to:T[:(GRIDX+2)*(GRIDY+2)]) map(from:T_new[:(GRIDX+2)*(GRIDY+2)])
-                   //:gcc11:justomp:(internal):works (fast:only copies data outside the while when preloaded)
               #pragma omp teams distribute parallel for collapse(2) private(i,j)
            #endif
            for(i = 1; i <= GRIDX; i++)
@@ -133,8 +107,8 @@ int main(int argc, char *argv[]) {
               //   #pragma acc loop independent //together with kernels above
               #endif
               for(j = 1; j <= GRIDY; j++)
-                 T_new[OFFSET(i,j)] = 0.25 * (T[OFFSET(i+1,j)] + T[OFFSET(i-1,j)] +
-                                       T[OFFSET(i,j+1)] + T[OFFSET(i,j-1)]);
+                 T_new[i][j] = 0.25 * (T[i+1][j] + T[i-1][j] +
+                                       T[i][j+1] + T[i][j-1]);
         #else
            #ifndef _JUSTOMP_
            getAverage_acc(T,T_new);
@@ -168,11 +142,11 @@ int main(int argc, char *argv[]) {
               #endif
               for(j = 1; j <= GRIDY; j++){
                  #if defined (_PGI_) || defined (_NVC_)
-                 dt = fmax( fabs(T_new[OFFSET(i,j)]-T[OFFSET(i,j)]), dt);
+                 dt = fmax( fabs(T_new[i][j]-T[i][j]), dt);
                  #else
-                 dt = MAX( fabs(T_new[OFFSET(i,j)]-T[OFFSET(i,j)]), dt);
+                 dt = MAX( fabs(T_new[i][j]-T[i][j]), dt);
                  #endif
-                 T[OFFSET(i,j)] = T_new[OFFSET(i,j)];
+                 T[i][j] = T_new[i][j];
               }
            }
         #else
@@ -185,7 +159,7 @@ int main(int argc, char *argv[]) {
         // periodically print largest change
         if((iteration % 100) == 0) 
             printf("Iteration %4.0d, dt %f, T[Fac*GX][Fac*GY]=%f\n",iteration,dt,
-                      T[OFFSET((int)(FACDATA*(float)GRIDX),(int)(FACDATA*(float)GRIDY))]);
+                      T[(int)(FACDATA*(float)GRIDX)][(int)(FACDATA*(float)GRIDY)]);
         
 	     iteration++;
     /*}else
@@ -193,28 +167,36 @@ int main(int argc, char *argv[]) {
        break;
     }*/
     }
-    //---- Section of final copies of arrays from the GPU to the host. Default is to use OpenMP functions
-    //---- Section for copying arrays back to host. Default is to use OpenMP
+    //---- Section for copying arrays back to host. Default is to use OpenMP except when STRUCTURED,
+    //     where end is implicit at the end of the while loop (c logic)
     //     (Needed because loading functions,and decided statement in internal preload, use "enter data")
     #ifndef _NOPRELOAD_
-       #if defined (_PRELOAD_INTERNAL_) || defined (_ALL_INTERNAL_)
+       #if defined (_PRELOAD_UNSTRUCTURED_) && defined (_ALL_INTERNAL_)
           #if defined(_JUSTACC_) || defined(_PRELOADACC_)
              #pragma acc exit data copyout(T[:(GRIDX+2)*(GRIDY+2)])
+             #pragma acc exit data delete(T,T_new)
           #else
              #pragma omp target exit data map(from:T[:(GRIDX+2)*(GRIDY+2)])
+             #pragma omp target exit data map(delete:T,T_new)
+          #endif
+       #elif defined (_PRELOAD_STRUCTURED_) && defined (_ALL_INTERNAL_)
+          #if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
+             //#pragma omp end target data //Not needed in c
+          #else
+             //#pragma acc end data //Not needed in c
           #endif
        #else
           #if defined(_JUSTACC_) || defined(_PRELOADACC_)
-             copy2HOST_acc(T);
+             copy2HOST_acc(T,T_new);
           #else
-             copy2HOST_omp(T);
+             copy2HOST_omp(T,T_new);
           #endif
        #endif
     #endif
 
     //------ Do we have T in the host ready to be saved?
     printf("Final values, iteration %4.0d, dt %f, T[Fac*GX][Fac*GY]=%f\n",iteration,dt,
-              T[OFFSET((int)(FACDATA*(float)GRIDX),(int)(FACDATA*(float)GRIDY))]);
+              T[(int)(FACDATA*(float)GRIDX)][(int)(FACDATA*(float)GRIDY)]);
 
     gettimeofday(&stop_time,NULL);
     timersub(&stop_time, &start_time, &elapsed_time); // measure time
