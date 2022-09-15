@@ -2,64 +2,87 @@
 #include <stdio.h>
 #include <math.h>
 #include "functions_acc.h"
-#include "globals.h"  //definition of size of matrices and needed externs
+#include "globals.h"
 
-#ifndef _PGI_
+#if !defined (_PGI_) && !defined (_NVC_)
    #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #endif
 
 // --------------------------------------------------------------------
-void getAverage_acc(int gridx,int gridy,double T[gridx+2][gridy+2],
-                    double T_new[gridx+2][gridy+2])
+void getAverage_acc(double *restrict U,double *restrict U_new)
 {
    int i,j;
    //#pragma acc kernels
    //   #pragma acc loop independent //to activate together with kernels above
-        //:pgi:noBeTested
+        //:pgi:toBeTested
    //#pragma acc parallel loop collapse(2)
-        //:pgi:noBeTested
-   //#pragma acc parallel loop copyin(T[:gridx+2][:gridy+2]) copyout(T_new[:gridx+2][:gridy+2]) collapse(2)
+        //:pgi:toBeTested
+   #pragma acc parallel loop copyin(U[:(GRIDX+2)*(GRIDY+2)]) copyout(U_new[:(GRIDX+2)*(GRIDY+2)]) collapse(2)
         //:pgi:justacc:static(non-managedMemory):works (fast:preloaded data works fine:avoids the indicated copy)
-        //:pgi:justacc:dynamic(non-managedMemory):works (slow:has data transfers in every call)
-   //#pragma acc parallel loop pcopyin(T[:gridx+2][:gridy+2]) pcopyout(T_new[:gridx+2][:gridy+2]) collapse(2)
-        //:pgi:justacc:static(non-managedMemory):works (fast:preloaded data works fine
-        //                                              simply works as above)
-        //:pgi:justacc:dynamic(non-managedMemory):works (slow:still has data transfers in every call)
-        //                                               simply works as above)  
-   #pragma acc parallel loop present(T[:gridx+2][:gridy+2]) present(T_new[:gridx+2][:gridy+2]) collapse(2)
+        //:pgi:justacc:dynamic(non-managedMemory):works (fast:preloaded data works fine:avoids the indicated copy)
+        //:gcc11:justacc:static(non-managedMemory):works (fast:preloaded data works fine:avoids the indicated copy)
+        //:gcc11:justacc:dynamic(non-managedMemory):works (fast:preloaded data works fine:avoids the indicated copy)
+   //#pragma acc parallel loop pcopyin(U[:(GRIDX+2)*(GRIDY+2)]) pcopyout(U_new[:(GRIDX+2)*(GRIDY+2)]) collapse(2)
+        //:pgi:justacc:static(non-managedMemory):works (fast:preloaded data works fine simply works as above)
+        //:pgi:justacc:dynamic(non-managedMemory):works (fast:preloaded data works fine simply works as above)
+        //:gcc11:justacc:static(non-managedMemory):works (fast:preloaded data works fine simply works as above)
+        //:gcc11:justacc:dynamic(non-managedMemory):works (fast:preloaded data works fine simply works as above)
+   //#pragma acc parallel loop present(U) present(U_new) collapse(2)
         //:pgi:justacc:static(non-managedMemory):works (fast:preloaded data works fine)
-        //:pgi:justacc:dynamic(non-managedMemory):fails: data in PRESENT not found
-   for(i = 1; i <= gridx; i++) 
+        //:pgi:justacc:dynamic(non-managedMemory):works (fast:preloaded data works fine)
+        //:gcc11:justacc:static(non-managedMemory):fails at runtime: present clause error
+        //:gcc11:justacc:dynamic(non-managedMemory):fails at runtime: present clause error
+   //#pragma acc parallel loop present(U[:(GRIDX+2)*(GRIDY+2)]) present(U_new[:(GRIDX+2)*(GRIDY+2)]) collapse(2)
+        //:pgi:justacc:static(non-managedMemory):works (fast:preloaded data works fine)
+        //:pgi:justacc:dynamic(non-managedMemory):works (fast:preloaded data works fine)
+        //:gcc11:justacc:static(non-managedMemory):works (fast:preloaded data works fine)
+        //:gcc11:justacc:dynamic(non-managedMemory):works (fast:preloaded data works fine)
+   for(i = 1; i <= GRIDX; i++) 
       //#pragma acc loop independent //to activate together with kernels above
-      for(j = 1; j <= gridy; j++) 
-         T_new[i][j] = 0.25 * (T[i+1][j] + T[i-1][j] +
-                               T[i][j+1] + T[i][j-1]);
+      for(j = 1; j <= GRIDY; j++) 
+         U_new[OFFSET(i,j)] = 0.25 * (U[OFFSET(i+1,j)] + U[OFFSET(i-1,j)] +
+                                      U[OFFSET(i,j+1)] + U[OFFSET(i,j-1)]);
+
+   return;
 }
 
 // --------------------------------------------------------------------
-double updateT_acc(int gridx,int gridy,double T[gridx+2][gridy+2],
-                   double T_new[gridx+2][gridy+2],double dt_old)
+double updateT_acc(double *restrict U, double *restrict U_new, double dt_old)
 {
    double dt=dt_old;
    int i,j;
-
-   // compute the largest change and copy T_new to T
+   // compute the largest change and copy U_new to U
    //#pragma acc kernels
    //   #pragma acc loop independent //to activate together with kernels above
    //#pragma acc parallel loop reduction(max:dt) collapse(2)
-   //#pragma acc parallel loop copy(T[:gridx+2][:gridy+2]) copyin(T_new[:gridx+2][:gridy+2]) reduction(max:dt) collapse(2)
-   //#pragma acc parallel loop pcopy(T[:gridx+2][:gridy+2]) pcopyin(T_new[:gridx+2][:gridy+2]) reduction(max:dt) collapse(2)
-   #pragma acc parallel loop present(T[:gridx+2][:gridy+2]) present(T_new[:gridx+2][:gridy+2]) reduction(max:dt) collapse(2)
-   for(i = 1; i <= gridx; i++){
+   #pragma acc parallel loop copy(U[:(GRIDX+2)*(GRIDY+2)]) copyin(U_new[:(GRIDX+2)*(GRIDY+2)]) reduction(max:dt) collapse(2)
+   //#pragma acc parallel loop pcopy(U[:(GRIDX+2)*(GRIDY+2)]) pcopyin(U_new[:(GRIDX+2)*(GRIDY+2)]) reduction(max:dt) collapse(2)
+   //#pragma acc parallel loop present(U) present(U_new) reduction(max:dt) collapse(2)
+   //#pragma acc parallel loop present(U[:(GRIDX+2)*(GRIDY+2)]) present(U_new[:(GRIDX+2)*(GRIDY+2)]) reduction(max:dt) collapse(2)
+   for(i = 1; i <= GRIDX; i++){
       //#pragma acc loop independent //to activate together with kernels above
-      for(j = 1; j <= gridy; j++){
-         #ifdef _PGI_
-         dt = fmax( fabs(T_new[i][j]-T[i][j]), dt);
+      for(j = 1; j <= GRIDY; j++){
+         #if defined (_PGI_) || defined (_NVC_)
+         dt = fmax( fabs(U_new[OFFSET(i,j)]-U[OFFSET(i,j)]), dt);
          #else
-         dt = MAX( fabs(T_new[i][j]-T[i][j]), dt);
+         dt = MAX( fabs(U_new[OFFSET(i,j)]-U[OFFSET(i,j)]), dt);
          #endif
-         T[i][j] = T_new[i][j];
+         U[OFFSET(i,j)] = U_new[OFFSET(i,j)];
       }
    }
    return dt;
+}
+
+// --------------------------------------------------------------------
+void loadGPU_acc(double *restrict U,double *restrict U_new)
+{
+   #pragma acc enter data copyin(U[:(GRIDX+2)*(GRIDY+2)]) create(U_new[:(GRIDX+2)*(GRIDY+2)])
+   return;
+}
+
+// --------------------------------------------------------------------
+void copy2HOST_acc(double *restrict U)
+{
+   #pragma acc exit data copyout(U[:(GRIDX+2)*(GRIDY+2)])
+   return;
 }

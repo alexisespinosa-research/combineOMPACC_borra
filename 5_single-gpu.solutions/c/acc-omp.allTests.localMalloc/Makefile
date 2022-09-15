@@ -180,6 +180,7 @@ laplace_acc-omp.dynaccpre-str.exe: laplace_acc-omp.dynaccpre-str.o libfunctions_
 	$(CC) $(CFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_cpu -lfunctions_omp -lfunctions_acc -o $@ $<
 
 #cpu
+#Bad Notes: topaz:gcc/11:runtime error: libgomp: device already active
 .PHONY: dynamicOmpPreload
 dynamicOmpPreload: laplace_acc-omp.dynomppre.exe libfunctions_cpu.so libfunctions_omp.so libfunctions_acc.so 
 
@@ -422,14 +423,15 @@ laplace_omp.dyn.o: laplace_acc-omp.c
 laplace_omp.dyn.exe: laplace_omp.dyn.o libfunctions_cpu.so libfunctions_omp.so
 	$(CC) $(CFLAGS) $(OMPFLAGS) -L. -lfunctions_cpu -lfunctions_omp -o $@ $<
 
+#cpu
 .PHONY: ompDynamicManaged
-ompDynamicManaged: laplace_omp.dyn-man.exe libfunctions_omp-man.so 
+ompDynamicManaged: laplace_omp.dyn-man.exe libfunctions_cpu-man.so libfunctions_omp-man.so 
 
 laplace_omp.dyn-man.o: laplace_acc-omp.c
 	$(CC) $(CFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $@ $<
 
-laplace_omp.dyn-man.exe: laplace_omp.dyn-man.o libfunctions_omp-man.so
-	$(CC) $(CFLAGS) $(OMPFLAGS) $(MANFLAGSOMP) -L. -lfunctions_omp-man -o $@ $<
+laplace_omp.dyn-man.exe: laplace_omp.dyn-man.o libfunctions_cpu-man.so libfunctions_omp-man.so
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(MANFLAGSOMP) -L. -lfunctions_cpu-man -lfunctions_omp-man -o $@ $<
 
 #cpu
 .PHONY: ompDynamicNoPreload

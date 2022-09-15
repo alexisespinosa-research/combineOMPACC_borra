@@ -1,6 +1,8 @@
 // Headers of functions that will make use of OpenMP
-void getAverage_omp(int gridx,int gridy,double T[gridx+2][gridy+2],
-                    double T_new[gridx+2][gridy+2]);
+void getAverage_omp(double *restrict U, double *restrict U_new);
 
-double updateT_omp(int gridx,int gridy,double T[gridx+2][gridy+2],
-                   double T_new[gridx+2][gridy+2],double old_dt);
+double updateT_omp(double *restrict U, double *restrict U_new,double dt_old);
+
+void loadGPU_omp(double *restrict U,double *restrict U_new);
+
+void copy2HOST_omp(double *restrict U);

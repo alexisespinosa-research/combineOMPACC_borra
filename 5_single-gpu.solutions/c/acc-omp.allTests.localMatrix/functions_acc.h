@@ -1,6 +1,8 @@
 // Headers of functions that will make use of openacc
-void getAverage_acc(int gridx,int gridy,double T[gridx+2][gridy+2],
-                    double T_new[gridx+2][gridy+2]);
+void getAverage_acc(double * restrict U, double *restrict U_new);
 
-double updateT_acc(int gridx,int gridy,double T[gridx+2][gridy+2],
-                   double T_new[gridx+2][gridy+2],double dt_old);
+double updateT_acc(double * restrict U, double *restrict U_new,double dt_old);
+
+void loadGPU_acc(double * restrict U, double *restrict U_new);
+
+void copy2HOST_acc(double * restrict U);

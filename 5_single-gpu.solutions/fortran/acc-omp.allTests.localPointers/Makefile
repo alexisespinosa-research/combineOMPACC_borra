@@ -609,31 +609,32 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##laplace_acc-omp.stanopre.exe: laplace_acc-omp.stanopre.o functions_omp.sta.o functions_acc.sta.o
 ##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
 ##!##
-##!##.PHONY: staticNoGPU
-##!##tagHere=$(tagF).staticNoGPU
-##!##
-##!##staticNoGPU: laplace_acc-omp.$(tagHere).exe
-##!##
-##!##globals.$(tagHere).o globals.mod: globals.F90
-##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c -o $*.o $<
-##!##
-##!##functions_acc.$(tagHere).o: functions_acc.F90 globals.$(tagHere).o
-##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -c -o $*.o $<
-##!##
-##!##functions_acc--sub.$(tagHere).o: functions_acc--sub.F90 globals.$(tagHere).o functions_acc.$(tagHere).o
-##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -c -o $*.o $<
-##!##
-##!##functions_omp.$(tagHere).o: functions_omp.F90 globals.$(tagHere).o
-##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c -o $*.o $<
-##!##
-##!##functions_omp--sub.$(tagHere).o: functions_omp--sub.F90 globals.$(tagHere).o functions_omp.$(tagHere).o
-##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c -o $*.o $<
-##!##
-##!##laplace_acc-omp.$(tagHere).o: laplace_acc-omp.F90 globals.$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o
-##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c -o $@ $<
-##!##
-##!##laplace_acc-omp.$(tagHere).exe: laplace_acc-omp.$(tagHere).o globals.$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o
-##!##	$(FC) $(FFLAGS) $(LIBS) -o $@ $^
+
+#cpu
+.PHONY: staticNoGPU
+mixHere=NoGPU
+tagHere=$(tagF).staticNoGPU
+tagStat=$(tagF).static
+
+staticNoGPU: laplace_$(mixHere).$(tagHere).exe
+
+functions_omp.$(tagHere).o: functions_omp.F90 globals.o
+	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+functions_omp--sub.$(tagHere).o: functions_omp--sub.F90 globals.o functions_omp.$(tagHere).o
+	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+functions_acc.$(tagHere).o: functions_acc.F90 globals.o
+	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+functions_acc--sub.$(tagHere).o: functions_acc--sub.F90 globals.o functions_acc.$(tagHere).o
+	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagStat).o functions_cpu--sub.$(tagStat).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
+	$(FC) $(FFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagStat).o functions_cpu--sub.$(tagStat).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
+	$(FC) $(FFLAGS) $(LIBS) -o $@ $^
 
 ##!##.PHONY: accStatic
 ##!##mixHere=acc
@@ -819,21 +820,7 @@ tagSta=$(tagF).static
 allInternalAcc: laplace_$(mixHere).$(tagHere).exe
 
 laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTACC_ -c $< -o $@
-
-laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $^ -o $@
-
-#cpu
-.PHONY: allInternalAccPreloadStructured
-mixHere=acc
-tagHere=$(tagF).allInternalPreStr
-tagSta=$(tagF).static
-
-allInternalAccPreloadStructured: laplace_$(mixHere).$(tagHere).exe
-
-laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_STRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTACC_ -c $< -o $@
+	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTACC_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
 	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $^ -o $@
@@ -886,21 +873,7 @@ tagSta=$(tagF).static
 allInternalOmp: laplace_$(mixHere).$(tagHere).exe
 
 laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTOMP_ -c $< -o $@
-
-laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $^ -o $@
-
-#cpu
-.PHONY: allInternalOmpPreloadStructured
-mixHere=omp
-tagHere=$(tagF).allInternalOmpPreStr
-tagSta=$(tagF).static
-
-allInternalOmpPreloadStructured: laplace_$(mixHere).$(tagHere).exe
-
-laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOAD_STRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTOMP_ -c $< -o $@
+	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTOMP_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
 	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $^ -o $@
@@ -953,7 +926,7 @@ tagSta=$(tagF).static
 allInternal: laplace_$(mixHere).$(tagHere).exe
 
 laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(OMPFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -c $< -o $@
+	$(FC) $(FFLAGS) $(OMPFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
 	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(ACCFLAGS) $^ -o $@

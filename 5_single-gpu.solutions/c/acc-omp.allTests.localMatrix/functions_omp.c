@@ -2,53 +2,73 @@
 #include <stdio.h>
 #include <math.h>
 #include "functions_omp.h"
+#include "globals.h"
 
-#ifndef _PGI_
+#if !defined (_PGI_) && !defined (_NVC_)
    #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #endif
 
 // --------------------------------------------------------------------
-void getAverage_omp(int gridx,int gridy,double T[gridx+2][gridy+2],
-                          double T_new[gridx+2][gridy+2])
+void getAverage_omp(double *restrict U, double *restrict U_new)
 {
    int i,j;
    //#pragma omp target
-       //:gcc11:justomp:static(non-managedMemory):fails:libgomp:cuCtxSynchronize: illegal memory access encountered
-       //:gcc11:justomp:dynamic(non-managedMemory):fails:libgomp:cuCtxSynchronize: illegal memory access encountered
-   //#pragma omp target map(to:T) map(from:T_new)
-       //:gcc11:justomp:static(non-managedMemory):fails:libgomp:cuCtxSynchronize: illegal memory access encountered
-       //:gcc11:justomp:dynamic(non-managedMemory):fails:libgomp:cuCtxSynchronize: illegal memory access encountered
-   #pragma omp target map(to:T[:gridx+2][:gridy+2]) map(from:T_new[:gridx+2][:gridy+2])
-       //:gcc11:justomp:static(non-managedMemory):works (slow:this naive-version has data transfers in every call)
-       //:gcc11:justomp:dynamic(non-managedMemory):works (slow:this naive-version has data transfers in every call)
-   #pragma omp teams distribute parallel for collapse(2)
-   for(i = 1; i <= gridx; i++)
-      for(j = 1; j <= gridy; j++)
-         T_new[i][j] = 0.25 * (T[i+1][j] + T[i-1][j] +
-                               T[i][j+1] + T[i][j-1]);
+       //:gcc11:justomp:static(non-managedMemory):fails at execution: wrong results
+       //:gcc11:justomp:dynamic(non-managedMemory):fails at execution: wrong results
+   //#pragma omp target map(to:U) map(from:U_new)
+       //:gcc11:justomp:static(non-managedMemory):fails at runtime:illegal memory access encountered
+       //:gcc11:justomp:dynamic(non-managedMemory):fails at runtime:illegal memory access encountered
+   #pragma omp target map(to:U[:(GRIDX+2)*(GRIDY+2)]) map(from:U_new[:(GRIDX+2)*(GRIDY+2)])
+       //:gcc11:justomp:static(non-managedMemory):works (fast: preloaded data works fine)
+       //:gcc11:justomp:dynamic(non-managedMemory):works (fast: preloaded data works fine)
+   #pragma omp teams distribute parallel for collapse(2) //Note: Always active and always together with one of the above
+   for(i = 1; i <= GRIDX; i++)
+      for(j = 1; j <= GRIDY; j++)
+         U_new[OFFSET(i,j)] = 0.25 * (U[OFFSET(i+1,j)] + U[OFFSET(i-1,j)] +
+                                      U[OFFSET(i,j+1)] + U[OFFSET(i,j-1)]);
+
+   return;
 }
 
 // --------------------------------------------------------------------
-double updateT_omp(int gridx,int gridy,double T[gridx+2][gridy+2],
-                   double T_new[gridx+2][gridy+2],double dt_old)
+double updateT_omp(double *restrict U, double *restrict U_new,double dt_old)
 {
    double dt=dt_old;
    int i,j;
    
-   // compute the largest change and copy T_new to T
+   // compute the largest change and copy U_new to U
    //#pragma omp target
-   //#pragma omp target map(tofrom:dt,T) map(to:T_new)
-   #pragma omp target map(tofrom:dt,T[:gridx+2][:gridy+2]) map(to:T_new[:gridx+2][:gridy+2])
-   #pragma omp teams distribute parallel for collapse(2) reduction(max:dt)
-   for(i = 1; i <= gridx; i++){
-      for(j = 1; j <= gridy; j++){
-#ifdef _PGI_
-         dt = fmax( fabs(T_new[i][j]-T[i][j]), dt);
-#else
-         dt = MAX( fabs(T_new[i][j]-T[i][j]), dt);
-#endif
-         T[i][j] = T_new[i][j];
+   //#pragma omp target map(tofrom:dt,U) map(to:U_new)
+   #pragma omp target map(tofrom:dt,U[:(GRIDX+2)*(GRIDY+2)]) map(to:U_new[:(GRIDX+2)*(GRIDY+2)])
+   #pragma omp teams distribute parallel for collapse(2) reduction(max:dt) //Note: Always active and always together with one of the above
+   for(i = 1; i <= GRIDX; i++){
+      for(j = 1; j <= GRIDY; j++){
+         #if defined (_PGI_) || defined (_NVC_)
+         dt = fmax( fabs(U_new[OFFSET(i,j)]-U[OFFSET(i,j)]), dt);
+         #else
+         dt = MAX( fabs(U_new[OFFSET(i,j)]-U[OFFSET(i,j)]), dt);
+         #endif
+         U[OFFSET(i,j)] = U_new[OFFSET(i,j)];
       }
    }
    return dt; 
+}
+
+// --------------------------------------------------------------------
+void loadGPU_omp(double *restrict U,double *restrict U_new)
+{
+   #pragma omp target enter data \
+               map(to:U[:(GRIDX+2)*(GRIDY+2)]) \
+               map(alloc:U_new[:(GRIDX+2)*(GRIDY+2)])
+
+   return;
+}
+
+// --------------------------------------------------------------------
+void copy2HOST_omp(double *restrict U)
+{
+   #pragma omp target exit data \
+               map(from:U[:(GRIDX+2)*(GRIDY+2)]) 
+
+   return;
 }
