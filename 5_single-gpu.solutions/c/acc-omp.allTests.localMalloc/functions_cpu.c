@@ -8,8 +8,8 @@
 void init(double *restrict T){
    int i,j;
 
-   for (i = 0; i <= GRIDX+1; i++){
-      for (j = 0; j <= GRIDY+1; j++){
+   for (i = 1; i <= GRIDX; i++){
+      for (j = 1; j <= GRIDY; j++){
          T[OFFSET(i,j)] = 0.0;
       }
    }
@@ -19,12 +19,12 @@ void init(double *restrict T){
    // set left side to 0 and right to a linear increase
    for (i = 0; i <= GRIDX+1; i++) {
       T[OFFSET(i,0)] = 0.0;
-      T[OFFSET(i,GRIDY+1)] = (128.0/GRIDX)*i;
+      T[OFFSET(i,GRIDY+1)] = (128.0/(double)GRIDX)*i;
    }
 
    // set top to 0 and bottom to linear increase
    for (j = 0; j <= GRIDY+1; j++) {
       T[OFFSET(0,j)] = 0.0;
-      T[OFFSET(GRIDX+1,j)] = (128.0/GRIDY)*j;
+      T[OFFSET(GRIDX+1,j)] = (128.0/(double)GRIDY)*j;
    }
 }

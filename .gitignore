@@ -5,6 +5,7 @@
 *.smod
 *.s
 *.swp
+*.swo
 core.*
 *.DS_Store
 results.copy_stats.csv
@@ -15,3 +16,4 @@ results.json
 results.stats.csv
 results.sysinfo.txt
 a.out
+slurm*.out

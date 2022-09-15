@@ -1,6 +1,6 @@
       module functions_cpu
-      !use globals
-      !implicit none
+      use globals
+      implicit none
 
       interface
 ! ----------------------------------

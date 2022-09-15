@@ -22,7 +22,7 @@
 #define MAX_TEMP_ERROR 0.02
 
 // data to report in prints
-#define FACDATA 0.98
+#define PLACEDATA 3
 
 // Global arrays
 //double *restrict T_new; // temperature grid
@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
         // periodically print largest change
         if((iteration % 100) == 0) 
             printf("Iteration %4.0d, dt %f, T[Fac*GX][Fac*GY]=%f\n",iteration,dt,
-                      T[OFFSET((int)(FACDATA*(float)GRIDX),(int)(FACDATA*(float)GRIDY))]);
+                      T[OFFSET(GRIDX-PLACEDATA,GRIDY-PLACEDATA)]);
         
 	     iteration++;
     /*}else
@@ -226,7 +226,8 @@ int main(int argc, char *argv[]) {
 
     //------ Do we have T in the host ready to be saved?
     printf("Final values, iteration %4.0d, dt %f, T[Fac*GX][Fac*GY]=%f\n",iteration,dt,
-              T[OFFSET((int)(FACDATA*(float)GRIDX),(int)(FACDATA*(float)GRIDY))]);
+              T[OFFSET(GRIDX-PLACEDATA,GRIDY-PLACEDATA)]);
+//              T[OFFSET((int)(FACDATA*(float)GRIDX),(int)(FACDATA*(float)GRIDY))]);
 
     gettimeofday(&stop_time,NULL);
     timersub(&stop_time, &start_time, &elapsed_time); // measure time

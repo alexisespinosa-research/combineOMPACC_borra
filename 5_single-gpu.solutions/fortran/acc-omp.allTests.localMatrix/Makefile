@@ -380,35 +380,38 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_
 ##!##laplace_acc-omp.dyn2compjustacc.$(FC)main.accgcc.exe: laplace_acc.dyn.o libfunctions_acc.gcc.so
 ##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_acc.gcc -o $@ $<
 ##!##
-##!##.PHONY: dynamicNoGPU
-##!##mixHere=noGPU
-##!##tagHere=dynamic
-##!##
-##!##dynamicNoGPU: laplace_$(mixHere).$(tagHere).exe libfunctions_omp_$(mixHere).$(tagHere).so libfunctions_acc_$(mixHere).$(tagHere).so 
-##!##
-##!##functions_omp_$(mixHere).$(tagHere).o: functions_omp.F90 globals.o
-##!##	$(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) $< -c -o $@
-##!##
-##!##functions_omp--sub_$(mixHere).$(tagHere).o: functions_omp--sub.F90 globals.o functions_omp_$(mixHere).$(tagHere).o
-##!##	   $(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) $< -c -o $@
-##!##
-##!##libfunctions_omp_$(mixHere).$(tagHere).so: functions_omp_$(mixHere).$(tagHere).o functions_omp--sub_$(mixHere).$(tagHere).o globals.o
-##!##	$(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) $^ -o $@
-##!##
-##!##functions_acc_$(mixHere).$(tagHere).o: functions_acc.F90 globals.o
-##!##	$(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) $< -c -o $@
-##!##
-##!##functions_acc--sub_$(mixHere).$(tagHere).o: functions_acc--sub.F90 globals.o functions_acc_$(mixHere).$(tagHere).o
-##!##	   $(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) $< -c -o $@
-##!##
-##!##libfunctions_acc_$(mixHere).$(tagHere).so: functions_acc_$(mixHere).$(tagHere).o functions_acc--sub_$(mixHere).$(tagHere).o globals.o
-##!##	$(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) $^ -o $@
-##!##
-##!##laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_acc_$(mixHere).$(tagHere).o functions_acc--sub_$(mixHere).$(tagHere).o functions_omp_$(mixHere).$(tagHere).o functions_omp--sub_$(mixHere).$(tagHere).o globals.o
-##!##	$(FC) $(FFLAGS) $(COMPILER_TAG) $< -c -o $@
-##!##
-##!##laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_omp_$(mixHere).$(tagHere).so libfunctions_acc_$(mixHere).$(tagHere).so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) $< -L. -lfunctions_omp_noGPU.dynamic -lfunctions_acc_noGPU.dynamic -o $@
+
+#cpu
+.PHONY: dynamicNoGPU
+mixHere=noGPU
+tagHere=$(tagF).dynNoGPU
+tagDyn=$(tagF).dynamic
+
+dynamicNoGPU: laplace_$(mixHere).$(tagHere).exe libfunctions_cpu.$(tagDyn).so libfunctions_omp.$(tagHere).so libfunctions_acc.$(tagHere).so
+
+functions_omp.$(tagHere).o: functions_omp.F90 globals.o
+	   $(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+functions_omp--sub.$(tagHere).o: functions_omp--sub.F90 globals.o functions_omp.$(tagHere).o
+	   $(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+libfunctions_omp.$(tagHere).so: functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.o
+	   $(FC) $(FFLAGS) $(DYNLIBFLAGS) $^ -o $@
+
+functions_acc.$(tagHere).o: functions_acc.F90 globals.o
+	   $(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+functions_acc--sub.$(tagHere).o: functions_acc--sub.F90 globals.o functions_acc.$(tagHere).o
+	   $(FC) $(FFLAGS) $(DYNLIBFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+libfunctions_acc.$(tagHere).so: functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
+	   $(FC) $(FFLAGS) $(DYNLIBFLAGS) $^ -o $@
+
+laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o functions_cpu--sub.$(tagDyn).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.o
+	   $(FC) $(FFLAGS) $(COMPILER_TAG) -c $< -o $@
+
+laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_omp.$(tagHere).so libfunctions_acc.$(tagHere).so
+	   $(FC) $(FFLAGS) $(LIBS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynNoGPU -lfunctions_acc.$(tagF).dynNoGPU -o $@
 
 #cpu
 .PHONY: accDynamic

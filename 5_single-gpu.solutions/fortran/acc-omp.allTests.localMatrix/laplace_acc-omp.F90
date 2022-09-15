@@ -11,7 +11,7 @@
 #      endif
        implicit none
        double precision, parameter :: MAX_TEMP_ERROR=0.02
-       double precision, parameter :: FACDATA=0.98
+       integer, parameter :: PLACEDATA=3
 !       double precision, allocatable :: T(:,:)
 !       double precision, allocatable :: T_new(:,:)
        double precision :: T(GRIDX+2,GRIDY+2)
@@ -141,7 +141,7 @@
           if (mod(iteration,100).eq.0) then
              print "(a,i4.0,a,f15.10,a,f15.10)",'Iteration ',iteration,&
                    ', dt ',dt,', T[Fac*GX][Fac*GY]=',&
-                   T(int(FACDATA*dble(GRIDX)),int(FACDATA*dble(GRIDY)))
+                   T(GRIDX-PLACEDATA,GRIDY-PLACEDATA)
           end if  
            
           iteration=iteration+1        
@@ -181,7 +181,7 @@
 !---- Do we have T in the host ready to be saved?
       print "(a,i4.0,a,f15.10,a,f15.10)",'Final values, iteration ',&
             iteration,', dt ',dt,', T[Fac*GX][Fac*GY]=',&
-            T(int(FACDATA*dble(GRIDX)),int(FACDATA*dble(GRIDY)))
+            T(GRIDX-PLACEDATA,GRIDY-PLACEDATA)
            
  
        call system_clock(count=stop_time)
