@@ -101,6 +101,19 @@ ifeq ($(compiler),prg-cray)
 	EXEFLAGS=$(OMPFLAGS)
 	COMPILER_TAG=-D_CLANG__
 endif
+ifeq ($(compiler),prg-aocc)
+	CC=cc
+	LIBS=-lm
+	OMPFLAGS=-fopenmp
+	ACCFLAGS=-fopenacc #OpenACC does not work on clang-cray compiler
+	MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
+	MANFLAGSOMP=
+	STALIBFLAGS=
+	DYNLIBFLAGS=-shared -fPIC
+	#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+	EXEFLAGS=$(OMPFLAGS)
+	COMPILER_TAG=-D_CLANG__
+endif
 
 #cpu
 .PHONY: dynamic

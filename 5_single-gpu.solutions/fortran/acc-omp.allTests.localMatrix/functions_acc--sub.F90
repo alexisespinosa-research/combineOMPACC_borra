@@ -42,7 +42,8 @@
 ! ----------------------------------
          module procedure copy2HOST_acc
 !$acc       exit data copyout(U)
-!$acc       exit data delete(U,U_new)
+!$aeg-acc       exit data delete(U,U_new) !Cray complains about U
+!$acc       exit data delete(U_new)
          end procedure copy2HOST_acc
 ! ----------------------------------
       end submodule sub

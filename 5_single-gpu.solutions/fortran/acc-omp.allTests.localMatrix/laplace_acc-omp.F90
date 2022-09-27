@@ -11,7 +11,7 @@
 #      endif
        implicit none
        double precision, parameter :: MAX_TEMP_ERROR=0.02
-       integer, parameter :: PLACEDATA=3
+       integer, parameter :: CORNEROFFSET=10
 !       double precision, allocatable :: T(:,:)
 !       double precision, allocatable :: T_new(:,:)
        double precision :: T(GRIDX+2,GRIDY+2)
@@ -140,8 +140,8 @@
 !         --- periodically print largest change
           if (mod(iteration,100).eq.0) then
              print "(a,i4.0,a,f15.10,a,f15.10)",'Iteration ',iteration,&
-                   ', dt ',dt,', T[Fac*GX][Fac*GY]=',&
-                   T(GRIDX-PLACEDATA,GRIDY-PLACEDATA)
+                   ', dt ',dt,', T[GX-CO][GY-CO]=',&
+                   T(GRIDX-CORNEROFFSET,GRIDY-CORNEROFFSET)
           end if  
            
           iteration=iteration+1        
@@ -157,7 +157,8 @@
 #            if defined(_JUSTACC_) || defined(_PRELOADACC_)
 !$aeg-acc           exit data copyout(T(:GRIDX+2,:GRIDY+2))
 !$acc           exit data copyout(T)
-!$acc           exit data delete(T,T_new)
+!$aeg-acc           exit data delete(T,T_new) !Cray complains about T
+!$acc           exit data delete(T_new)
 #            else
 !$aeg-omp           target exit data map(from:T(:GRIDX+2,:GRIDY+2))
 !$omp           target exit data map(from:T)
@@ -180,12 +181,13 @@
 
 !---- Do we have T in the host ready to be saved?
       print "(a,i4.0,a,f15.10,a,f15.10)",'Final values, iteration ',&
-            iteration,', dt ',dt,', T[Fac*GX][Fac*GY]=',&
-            T(GRIDX-PLACEDATA,GRIDY-PLACEDATA)
+            iteration,', dt ',dt,', T[GX-CO][GY-CO]=',&
+            T(GRIDX-CORNEROFFSET,GRIDY-CORNEROFFSET)
            
  
        call system_clock(count=stop_time)
        elapsed_time=real(stop_time-start_time)/real(clock_rate)
-       print "(a,f10.6,a)",'Total time was ',elapsed_time,' seconds.'
+       print "(a,i9,a,i9,a,f12.6,a)",'Total time for mesh GRID(X,Y)=(',&
+              GRIDX,',',GRIDY,') was ',elapsed_time,' seconds.'
 
        end program laplace
