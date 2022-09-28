@@ -231,7 +231,8 @@ int main(int argc, char *argv[]) {
     gettimeofday(&stop_time,NULL);
     timersub(&stop_time, &start_time, &elapsed_time); // measure time
 
-    printf("Total time was %f seconds.\n", elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+    printf("Total time for mesh GRID(X,Y)=(%i,%i) was %f seconds.\n", GRIDX,GRIDY,
+           elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
 
     return 0;
 }

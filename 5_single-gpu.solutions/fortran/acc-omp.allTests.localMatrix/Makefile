@@ -2,11 +2,13 @@
 # reset this from the command line for easier making of other test code:
 #CLUSTER=topaz
 #CLUSTER=mulan
-CLUSTER=lumi
+#CLUSTER=lumi
+CLUSTER=amd
 
 #VENDOR=gnu
 #VENDOR=nvhpc
-VENDOR=cray
+#VENDOR=cray
+VENDOR=rocm
 
 SURNAME=singleTargetBasic
 
@@ -124,9 +126,42 @@ ifeq ($(CLUSTER),lumi)
 endif
 
 # --------------------
+#  Specific settings for AMDnode
+ifeq ($(CLUSTER),amd)
+	ROCM_LLVM ?= /opt/rocm/llvm
+	ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+
+	INSTALLED_GPU = $(shell $(ROCM_LLVM)/../bin/rocm_agent_enumerator | grep -m 1 -E gfx[^0]{1})
+	ROCM_GPU ?= $(INSTALLED_GPU)
+
+	ifeq ($(TARGETS),)
+	   TARGETS =-march=$(ROCM_GPU)
+	endif
+
+	LFLAGS =
+	ifeq ($(VENDOR),rocm)
+		CC = $(ROCM_LLVM)/bin/clang
+		FC =$(ROCM_LLVM)/bin/flang
+		OMPFLAGS =-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
+		ACCFLAGS=-hacc
+		MANFLAGS=
+		MANFLAGSOMP=
+		STALIBFLAGS=
+		DYNLIBFLAGS=-shared -fPIC
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS)
+		COMPILER_TAG=-D_FLANG_
+	endif
+endif
+
+# --------------------
 #  General tags
-tagF=$(CLUSTER).$(VENDOR).$(FC)
-tagC=$(CLUSTER).$(VENDOR).$(CC)
+FCNAME1=$(subst /, ,$(FC))
+FCNAME=$(lastword $(FCNAME1))
+CCNAME1=$(subst /, ,$(FC))
+CCNAME=$(lastword $(FCNAME1))
+tagF=$(CLUSTER).$(VENDOR).$(FCNAME)
+tagC=$(CLUSTER).$(VENDOR).$(CCNAME)
 
 # --------------------
 #cpu
@@ -659,7 +694,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 #cpu
 .PHONY: accStatic
 mixHere=acc
-tagHere=$(CLUSTER).$(VENDOR).$(FC).static
+tagHere=$(tagF).static
 tagSta=$(tagF).static
 
 accStatic: laplace_$(mixHere).$(tagHere).exe
@@ -702,7 +737,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 #cpu
 .PHONY: ompStatic
 mixHere=omp
-tagHere=$(CLUSTER).$(VENDOR).$(FC).static
+tagHere=$(tagF).static
 tagSta=$(tagF).static
 
 ompStatic: laplace_$(mixHere).$(tagHere).exe

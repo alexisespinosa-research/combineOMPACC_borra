@@ -1,14 +1,16 @@
 #cluster=topaz
 #cluster=mulan
-cluster=lumi
+#cluster=lumi
+cluster=amd
 
 #compiler=gcc
 #compiler=pgcc
 #compiler=nvc
 #compiler=clang
 #compiler=prg-gnu
-compiler=prg-cray
+#compiler=prg-cray
 #compiler=prg-aocc
+compiler=rocm-clang
 
 CFLAGS=-O3
 
@@ -23,6 +25,19 @@ endif
 ifeq ($(cluster),lumi)
 	GPU_ARCH= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
 	GPU_TARGETS= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
+endif
+ifeq ($(cluster),amd)
+	UNAMEP= $(shell uname -p)
+	ROCM_CPUTARGET= $(UNAMEP)-pc-linux-gnu
+	ifeq ($(UNAMEP),ppc64le)
+	   ROCM_CPUTARGET= ppc64le-linux-gnu
+	endif
+
+	ROCM_LLVM ?= /opt/rocm/llvm
+	ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+
+	INSTALLED_GPU  = $(shell $(ROCM_LLVM)/../bin/rocm_agent_enumerator | grep -m 1 -E gfx[^0]{1})
+	ROCM_GPU       ?= $(INSTALLED_GPU)
 endif
 
 ifeq ($(compiler),gcc)
@@ -86,7 +101,7 @@ ifeq ($(compiler),clang)
 	DYNLIBFLAGS=-shared -fPIC
 	#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
 	EXEFLAGS=$(OMPFLAGS)
-	COMPILER_TAG=-D_CLANG__
+	COMPILER_TAG=-D_CLANG_
 endif
 ifeq ($(compiler),prg-cray)
 	CC=cc
@@ -99,7 +114,7 @@ ifeq ($(compiler),prg-cray)
 	DYNLIBFLAGS=-shared -fPIC
 	#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
 	EXEFLAGS=$(OMPFLAGS)
-	COMPILER_TAG=-D_CLANG__
+	COMPILER_TAG=-D_CLANG_
 endif
 ifeq ($(compiler),prg-aocc)
 	CC=cc
@@ -112,7 +127,20 @@ ifeq ($(compiler),prg-aocc)
 	DYNLIBFLAGS=-shared -fPIC
 	#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
 	EXEFLAGS=$(OMPFLAGS)
-	COMPILER_TAG=-D_CLANG__
+	COMPILER_TAG=-D_CLANG_
+endif
+ifeq ($(compiler),rocm-clang)
+	CC = $(ROCM_LLVM)/bin/clang
+	LIBS=-lm
+	OMPFLAGS = -target $(ROCM_CPUTARGET) -fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) -march=$(ROCM_GPU)
+	ACCFLAGS=-fopenacc -fopenacc-targets=$(GPU_TARGETS) #Not recognised by clang
+	MANFLAGS=-managed #Not recognized by clang, but set to generate an error when tried
+	MANFLAGSOMP=
+	STALIBFLAGS=
+	DYNLIBFLAGS=-shared -fPIC
+	#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+	EXEFLAGS=$(OMPFLAGS)
+	COMPILER_TAG=-D_CLANG_
 endif
 
 #cpu
