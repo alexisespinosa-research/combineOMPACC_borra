@@ -65,6 +65,18 @@ endif
 #  Specific settings for mulan
 ifeq ($(CLUSTER),mulan)
 	GPU_ARCH=gfx908
+	ROCM_PATH ?= /opt/rocm-4.5.0
+	ROCM_LLVM = $(ROCM_PATH)/llvm
+	ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+
+	INSTALLED_GPU = $(GPU_ARCH)
+	ROCM_GPU ?= $(INSTALLED_GPU)
+
+	ifeq ($(TARGETS),)
+	   TARGETS =-march=$(ROCM_GPU)
+	endif
+
+	LFLAGS =
 	ifeq ($(VENDOR),cray)
 		CC=cc
 		FC=ftn
@@ -90,6 +102,32 @@ ifeq ($(CLUSTER),mulan)
 		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
 		EXEFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_GNU_
+	endif
+	ifeq ($(VENDOR),rocm-llvm)
+		CC = $(ROCM_LLVM)/bin/clang
+		FC =$(ROCM_LLVM)/bin/flang
+		OMPFLAGS =-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
+		ACCFLAGS=-hacc
+		MANFLAGS=
+		MANFLAGSOMP=
+		STALIBFLAGS=
+		DYNLIBFLAGS=-shared -fPIC
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS)
+		COMPILER_TAG=-D_FLANG_
+	endif
+	ifeq ($(VENDOR),rocm-amd)
+		CC = $(ROCM_LLVM)/bin/amdclang
+		FC =$(ROCM_LLVM)/bin/amdflang
+		OMPFLAGS =-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
+		ACCFLAGS=-hacc
+		MANFLAGS=
+		MANFLAGSOMP=
+		STALIBFLAGS=
+		DYNLIBFLAGS=-shared -fPIC
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS)
+		COMPILER_TAG=-D_FLANG_
 	endif
 endif
 
@@ -128,7 +166,8 @@ endif
 # --------------------
 #  Specific settings for AMDnode
 ifeq ($(CLUSTER),amd)
-	ROCM_LLVM ?= /opt/rocm/llvm
+	ROCM_PATH ?= /opt/rocm
+	ROCM_LLVM = $(ROCM_PATH)/llvm
 	ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
 
 	INSTALLED_GPU = $(shell $(ROCM_LLVM)/../bin/rocm_agent_enumerator | grep -m 1 -E gfx[^0]{1})
@@ -139,7 +178,7 @@ ifeq ($(CLUSTER),amd)
 	endif
 
 	LFLAGS =
-	ifeq ($(VENDOR),rocm)
+	ifeq ($(VENDOR),rocm-llvm)
 		CC = $(ROCM_LLVM)/bin/clang
 		FC =$(ROCM_LLVM)/bin/flang
 		OMPFLAGS =-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)

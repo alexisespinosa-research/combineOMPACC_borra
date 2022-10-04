@@ -1,11 +1,11 @@
 // grid size
-#define GRIDX    2048
+//#define GRIDX    2048
 //#define GRIDX    8192
-//#define GRIDX    16384
+#define GRIDX    16384
 //#define GRIDX    32768
 
-#define GRIDY    2048
-//#define GRIDY    8192
+//#define GRIDY    2048
+#define GRIDY    8192
 //#define GRIDY    16384
 //#define GRIDY    32768
 

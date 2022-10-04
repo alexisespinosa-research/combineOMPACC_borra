@@ -21,6 +21,15 @@ endif
 ifeq ($(cluster),mulan)
 	GPU_ARCH= #GPU settings are automatic with: "module load craype-accel-amd-gfx908 rocm" 
 	GPU_TARGETS= #GPU settings are automatic with: "module load craype-accel-amd-gfx908 rocm" 
+	UNAMEP= x86_64
+	ROCM_CPUTARGET= $(UNAMEP)-pc-linux-gnu
+
+	ROCM_PATH ?= /opt/rocm-4.5.0
+	ROCM_LLVM ?= $(ROCM_PATH)/llvm
+	ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+
+	INSTALLED_GPU  = gfx908
+	ROCM_GPU       ?= $(INSTALLED_GPU)
 endif
 ifeq ($(cluster),lumi)
 	GPU_ARCH= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
@@ -33,7 +42,8 @@ ifeq ($(cluster),amd)
 	   ROCM_CPUTARGET= ppc64le-linux-gnu
 	endif
 
-	ROCM_LLVM ?= /opt/rocm/llvm
+	ROCM_PATH ?= /opt/rocm
+	ROCM_LLVM = $(ROCM_PATH)/llvm
 	ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
 
 	INSTALLED_GPU  = $(shell $(ROCM_LLVM)/../bin/rocm_agent_enumerator | grep -m 1 -E gfx[^0]{1})
@@ -129,8 +139,21 @@ ifeq ($(compiler),prg-aocc)
 	EXEFLAGS=$(OMPFLAGS)
 	COMPILER_TAG=-D_CLANG_
 endif
-ifeq ($(compiler),rocm-clang)
+ifeq ($(compiler),rocm-llvm-clang)
 	CC = $(ROCM_LLVM)/bin/clang
+	LIBS=-lm
+	OMPFLAGS = -target $(ROCM_CPUTARGET) -fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) -march=$(ROCM_GPU)
+	ACCFLAGS=-fopenacc -fopenacc-targets=$(GPU_TARGETS) #Not recognised by clang
+	MANFLAGS=-managed #Not recognized by clang, but set to generate an error when tried
+	MANFLAGSOMP=
+	STALIBFLAGS=
+	DYNLIBFLAGS=-shared -fPIC
+	#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+	EXEFLAGS=$(OMPFLAGS)
+	COMPILER_TAG=-D_CLANG_
+endif
+ifeq ($(compiler),rocm-amd-clang)
+	CC = $(ROCM_LLVM)/bin/amdclang
 	LIBS=-lm
 	OMPFLAGS = -target $(ROCM_CPUTARGET) -fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) -march=$(ROCM_GPU)
 	ACCFLAGS=-fopenacc -fopenacc-targets=$(GPU_TARGETS) #Not recognised by clang

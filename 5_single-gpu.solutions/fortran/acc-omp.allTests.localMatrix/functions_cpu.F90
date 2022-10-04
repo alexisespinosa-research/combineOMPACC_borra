@@ -5,7 +5,7 @@
       interface
 ! ----------------------------------
          module subroutine init(U)
-         double precision, intent( out ) :: U(:,:)
+         double precision, intent(inout) :: U(:,:)
          end subroutine init
 ! ----------------------------------
       end interface

@@ -1,7 +1,8 @@
        program laplace
 
        implicit none
-       integer, parameter ::  GRIDX=2048, GRIDY=2048
+!       integer, parameter ::  GRIDX=2048, GRIDY=2048
+       integer, parameter ::  GRIDX=16384, GRIDY=16384
        double precision, parameter :: MAX_TEMP_ERROR=0.02
        double precision  T(GRIDX+2,GRIDY+2)
        double precision  T_new(GRIDX+2,GRIDY+2)
