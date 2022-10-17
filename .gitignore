@@ -6,6 +6,7 @@
 *.s
 *.swp
 *.swo
+*.lst
 core.*
 *.DS_Store
 results.copy_stats.csv

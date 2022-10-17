@@ -77,7 +77,7 @@
        allocate(T_new(0:local_nx+1,0:local_ny+1))
        call init(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
 
-       !simulation iterations
+! --------- Simulation Iterations
        requests=MPI_REQUEST_NULL
        !$omp target data map(tofrom:T) map(alloc:T_new)
        do while ((dt_world.gt.MAX_TEMP_ERROR).and. &
@@ -139,7 +139,7 @@
 
           !---- reduce the dt value among all MPI ranks
           call mpi_allreduce(dt, dt_world, 1, MPI_DOUBLE,&
-                             MPI_SUM, MPI_COMM_WORLD, ierr)
+                             MPI_MAX, MPI_COMM_WORLD, ierr)
 
           !---- Waiting for the MPI messages to finalise
           !print *,'Start waiting all'
@@ -154,7 +154,8 @@
           !periodically print largest change
           if (mod(iteration,100).eq.0) then
           !if (mod(iteration,1).eq.0) then
-             print "(a,i4.0,a,f15.7)",'Iteration ',iteration,', dt ',dt
+             print "(a,i4.0,a,f15.7,a,f15.7)",&
+              'Iteration ',iteration,',dt=',dt,',dt_world=',dt_world
           end if  
 
           iteration=iteration+1        
