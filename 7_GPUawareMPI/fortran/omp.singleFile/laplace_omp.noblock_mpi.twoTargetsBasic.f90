@@ -21,7 +21,7 @@
        integer :: iteration=1 
        double precision :: dt=0.0,dt_world=100
        character(len=32) :: arg
-       integer start_time,stop_time,clock_rate
+       double precision :: start_time,stop_time
        real elapsed_time
        integer :: ierr, csize, myrank, requests(4)
        integer status(MPI_STATUS_SIZE)
@@ -32,7 +32,6 @@
        call mpi_init(ierr)
        call mpi_comm_size(MPI_COMM_WORLD, csize, ierr)
        call mpi_comm_rank(MPI_COMM_WORLD, myrank, ierr)
-       start_time=MPI_Wtime()
 
 ! -------- Choosing device
        call omp_set_default_device(myrank)
@@ -83,14 +82,14 @@
 ! --------- Allocating and Initialising distributed array
        allocate(T(0:local_nx+1,0:local_ny+1))
        allocate(T_new(0:local_nx+1,0:local_ny+1))
-       call init(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       !call init_linear128(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       call init_fixedIndexVal(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
        !print *,T
 
 ! --------- Simulation Iterations
+       start_time=MPI_Wtime()
        requests=MPI_REQUEST_NULL
-       !$aeg-omp target enter data map(alloc:T) map(alloc:T_new)
-       !$aeg-omp target update to(T)
-       !$omp target data map(tofrom:T) map(alloc:T_new)
+       !$omp target enter data map(to:T) map(alloc:T_new)
        do while ((dt_world.gt.MAX_TEMP_ERROR).and. &
                 (iteration.le.max_iterations))
 
@@ -124,7 +123,6 @@
           !---- Retrieve the edge data from the GPU:
           !$omp target update from(T(1:local_nx,1:1))
           !$omp target update from(T(1:local_nx,local_ny:1))
-          !$aeg-omp target update from(T)
 
           !---- send the edge data column into the left halo region
           !   - and receive data from the left into own halo region
@@ -160,25 +158,22 @@
           !---- Resend edge data to the GPU:
           !$omp target update to(T(1:local_nx,0:1))
           !$omp target update to(T(1:local_nx,local_ny+1:1))
-          !$aeg-omp target update to(T)
 
           !periodically print largest change
           if (mod(iteration,100).eq.0) then
           !if (mod(iteration,1).eq.0) then
-             print "(a,i4.0,3(a,f10.5))",'Iteration ',iteration,&
-              ', dt ',dt,', dt_world=',dt_world,', T(GX-CO,GY-CO)=',&
-              T(local_nx-1-CORNEROFFSET,local_ny-1-CORNEROFFSET)
+             print "(a,i4.0,3(a,f15.10))",'Iteration ',iteration,&
+              ', dt ',dt,', dt_world=',dt_world,', T(GXB-CO,GYB-CO)=',&
+              T(local_nx+1-CORNEROFFSET,local_ny+1-CORNEROFFSET)
              !print *, T
           end if  
 
           iteration=iteration+1        
        end do
-       !$omp end target data
-       !$aeg-omp target update from(T)
-       !$aeg-omp target exit data map (delete:T,T_new)
-       print "(a,i4.0,3(a,f10.5))",'Final val, iteration ',iteration,&
-        ', dt ',dt,', dt_world=',dt_world,', T(GX-CO,GY-CO)=',&
-        T(local_nx-1-CORNEROFFSET,local_ny-1-CORNEROFFSET)
+       !$omp target exit data map(from:T) map(delete:T_new)
+       print "(a,i4.0,3(a,f15.10))",'Final val, iteration ',iteration,&
+        ', dt ',dt,', dt_world=',dt_world,', T(GXB-CO,GYB-CO)=',&
+        T(local_nx+1-CORNEROFFSET,local_ny+1-CORNEROFFSET)
 
        stop_time=MPI_Wtime()
        elapsed_time=stop_time-start_time
@@ -189,8 +184,8 @@
 
 ! ===============================================
        contains
-! =============== SUBROUTINE INIT
-       subroutine init(T,bx,by,bxtot,bytot,ixstart,jystart,nxtot,nytot)
+! =============== SUBROUTINE init_linear128
+       subroutine init_linear128(T,bx,by,bxtot,bytot,ixstart,jystart,nxtot,nytot)
        implicit none
        double precision, intent( out ) :: T(0:,0:)
        integer, intent(in) :: bx,by,bxtot,bytot
@@ -220,12 +215,7 @@
 ! ----- set upper boundary to the lineary varying temperature
        if (by == bytot) then
           do i=0,hnx+1
-             !T(i,hny+1)=(128.0/dble(nxtot))*dble(ixstart+i-1)   
-             T(i,hny+1)=dble(ixstart+i-1)   
-          end do
-          do i=hnx+2-10+1,hnx+2
-             print "(2(a,i4.0),a,f10.5)",'iFort=',i,',jFort=',hny+2,&
-                  ',T(iFort,jFort)=',T(i-1,hny+2-1)
+             T(i,hny+1)=(128.0/dble(nxtot))*dble(ixstart+i-1)   
           end do
        end if
 ! ----- if the piece is part of the top boundary bx=1
@@ -240,18 +230,62 @@
 ! ----- set right boundary to the lineary varying temperature
        if (bx == bxtot) then
           do j=0,hny+1
-             !T(hnx+1,j)=(128.0/dble(nytot))*dble(jystart+j-1)
-             T(hnx+1,j)=dble(jystart+j-1)
+             T(hnx+1,j)=(128.0/dble(nytot))*dble(jystart+j-1)
           end do
-          do j=hny+2-10+1,hny+2
-             print "(2(a,i4.0),a,f10.5)",'iFort=',hnx+2,',jFort=',j,&
-                ',T(iFort,jFort)=',T(hnx+2-1,j-1)
+       end if
+       end subroutine init_linear128
+! ==============================================
+! =============== SUBROUTINE init_fixedIndexVal
+       subroutine init_fixedIndexVal(T,bx,by,bxtot,bytot,ixstart,jystart,nxtot,nytot)
+       implicit none
+       double precision, intent( out ) :: T(0:,0:)
+       integer, intent(in) :: bx,by,bxtot,bytot
+       integer, intent( in ) :: ixstart,jystart,nxtot,nytot 
+       integer :: hnx, hny, i, j
+
+! ------ size of the received array
+       hnx=size(T,1)-2
+       hny=size(T,2)-2
+        
+! ------ interior of the array
+       do j=0,hny+1
+          do i=0,hnx+1
+             T(i,j)=0.0
+          end do
+       end do
+
+! ----- if the piece is part of the left boundary by=1
+! ----- set lower boundary to 0
+       if (by == 1) then
+          do i=0,hnx+1
+             T(i,0)=0.0
           end do
        end if
 
+! ----- if the piece is part of the right boundary by=bytot
+! ----- set upper boundary to same as index
+       if (by == bytot) then
+          do i=0,hnx+1
+             T(i,hny+1)=dble(ixstart+i-1)   
+          end do
+       end if
+! ----- if the piece is part of the top boundary bx=1
+! ----- set left boundary to 0
+       if (bx == 1) then
+          do j=0,hny+1
+             T(0,j)=0.0
+          end do
+       end if
 
-
-       end subroutine init
-     end program laplace
+! ----- if the piece is part of the bottom boundary bx=bxtot
+! ----- set right boundary to same as index
+       if (bx == bxtot) then
+          do j=0,hny+1
+             T(hnx+1,j)=dble(jystart+j-1)
+          end do
+       end if
+       end subroutine init_fixedIndexVal
+! ==============================================
+      end program laplace
 ! ======================================================
 

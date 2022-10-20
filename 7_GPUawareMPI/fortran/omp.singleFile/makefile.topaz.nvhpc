@@ -1,0 +1,34 @@
+# --------------------
+# reset this from the command line for easier making of other test code:
+CLUSTER=topaz
+GPU_ARCH=cc70
+VENDOR=nvhpc
+MPISURNAME=noblock_mpi
+#SURNAME=singleTargetBasic
+SURNAME=twoTargetsBasic
+
+# --------------------
+CC=mpicc
+F90=mpifort
+CFLAGS=-O3 -mp=gpu -Minfo=accel,mp -gpu=$(GPU_ARCH)
+FFLAGS=-O3 -mp=gpu -Minfo=accel,mp -gpu=$(GPU_ARCH)
+LIBS=
+COMPILER_TAG=-D_NVHPC_
+OBJ=laplace_omp.$(MPISURNAME).$(SURNAME).o
+TARGET=laplace_omp.$(MPISURNAME).$(SURNAME).exe
+
+%.o: %.f90
+	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(F90) $(FFLAGS) $(LIBS) -o $@ $^
+	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
+
+cleanAll:
+	rm -f *.exe *.o *.s
+
+cleanThis:
+	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+
+leaveThis:
+	rm -f $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
