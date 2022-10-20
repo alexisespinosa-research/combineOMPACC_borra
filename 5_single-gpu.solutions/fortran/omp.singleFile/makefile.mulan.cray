@@ -3,14 +3,15 @@
 CLUSTER=mulan
 VENDOR=cray
 #SURNAME=singleTargetBasic
-SURNAME=singleTargetTesting
-#SURNAME=twoTargetsBasic
+SURNAME=twoTargetsBasic
 
 # --------------------
 CC=cc
 F90=ftn
-CFLAGS=-O3 -fopenmp -rm
-FFLAGS=-O3 -homp -rm
+#CFLAGS=-O3 -fopenmp -rm
+#FFLAGS=-O3 -homp -rm
+CFLAGS=-O3 -fopenmp
+FFLAGS=-O3 -homp
 LIBS=
 COMPILER_TAG=-D_CRAY_
 OBJ=laplace_omp.$(SURNAME).o
@@ -24,7 +25,7 @@ $(TARGET): $(OBJ)
 	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
 
 cleanAll:
-	rm -f *.exe *.o *.s
+	rm -f *.exe *.o *.s *.lst
 
 cleanThis:
 	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s

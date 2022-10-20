@@ -10,7 +10,7 @@ cluster=amd
 #compiler=prg-gnu
 #compiler=prg-cray
 #compiler=prg-aocc
-compiler=rocm-clang
+compiler=rocm-llvm-clang
 
 CFLAGS=-O3
 

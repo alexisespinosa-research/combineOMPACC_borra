@@ -16,7 +16,9 @@ SURNAME=singleTargetBasic
 #  General settings
 CFLAGS=-O3
 FFLAGS=-O3
-LIBS=
+LDLIBS=
+LDFLAGS=
+
 
 # --------------------
 #  Specific settings for topaz
@@ -29,10 +31,9 @@ ifeq ($(CLUSTER),topaz)
 		ACCFLAGS=-fopenacc
 		MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
 		MANFLAGSOMP=
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS)
+		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_GNU_
 	endif
 	ifeq ($(VENDOR),pgi)
@@ -42,9 +43,8 @@ ifeq ($(CLUSTER),topaz)
 		ACCFLAGS=-acc -Minfo=accel -ta=tesla:$(GPU_ARCH)
 		MANFLAGS=-ta=tesla:managed
 		MANFLAGSOMP=
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		EXEFLAGS=-ta=tesla:$(GPU_ARCH)
+		LDFLAGS=-ta=tesla:$(GPU_ARCH)
 		COMPILER_TAG=-D_PGI_
 	endif
 	ifeq ($(VENDOR),nvhpc)
@@ -54,10 +54,17 @@ ifeq ($(CLUSTER),topaz)
 		ACCFLAGS=-acc -Minfo=accel -gpu=$(GPU_ARCH)
 		MANFLAGS=-gpu=managed
 		MANFLAGSOMP=-gpu=managed
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		EXEFLAGS=$(OMPFLAGS)
+		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_NVHPC_
+		ifeq ($(USE_NVTX),true)
+	      NVTXDIR=-L/pawsey/centos7.6/devel/binary/cuda/11.4.2/lib64
+			#NVTXDIR=-L/group/pawsey0001/software/centos7.6/apps/binary/nvhpc/22.7/Linux_x86_64/22.7/cuda/11.7/targets/x86_64-linux/lib
+			NVTXLIB=-lnvToolsExt
+			#NVTXLIB=-lnvhpcwrapnvtx
+			LDFLAGS+=$(NVTXDIR) $(NVTXLIB) 
+			COMPILER_TAG+=-D_NVTX_TRUE_
+		endif
 	endif
 endif
 
@@ -84,10 +91,9 @@ ifeq ($(CLUSTER),mulan)
 		ACCFLAGS=-hacc
 		MANFLAGS=
 		MANFLAGSOMP=
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS)
+		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_CRAY_
 	endif
 	ifeq ($(VENDOR),gnu)
@@ -97,10 +103,9 @@ ifeq ($(CLUSTER),mulan)
 		ACCFLAGS=-fopenacc
 		MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
 		MANFLAGSOMP=
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS)
+		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_GNU_
 	endif
 	ifeq ($(VENDOR),rocm-llvm)
@@ -110,10 +115,9 @@ ifeq ($(CLUSTER),mulan)
 		ACCFLAGS=-hacc
 		MANFLAGS=
 		MANFLAGSOMP=
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS)
+		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_FLANG_
 	endif
 	ifeq ($(VENDOR),rocm-amd)
@@ -123,10 +127,9 @@ ifeq ($(CLUSTER),mulan)
 		ACCFLAGS=-hacc
 		MANFLAGS=
 		MANFLAGSOMP=
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS)
+		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_FLANG_
 	endif
 endif
@@ -142,10 +145,9 @@ ifeq ($(CLUSTER),lumi)
 		ACCFLAGS=-hacc
 		MANFLAGS=
 		MANFLAGSOMP=
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS)
+		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_CRAY_
 	endif
 	ifeq ($(VENDOR),gnu)
@@ -155,10 +157,9 @@ ifeq ($(CLUSTER),lumi)
 		ACCFLAGS=-fopenacc
 		MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
 		MANFLAGSOMP=
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS)
+		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_GNU_
 	endif
 endif
@@ -185,10 +186,9 @@ ifeq ($(CLUSTER),amd)
 		ACCFLAGS=-hacc
 		MANFLAGS=
 		MANFLAGSOMP=
-		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		EXEFLAGS=$(OMPFLAGS)
+		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_FLANG_
 	endif
 endif
@@ -244,7 +244,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 	$(FC) $(FFLAGS) $(COMPILER_TAG) -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_omp.$(tagHere).so libfunctions_acc.$(tagHere).so
-	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -o $@
 
 .PHONY: dynamicManaged
 mixHere=acc-omp
@@ -283,7 +283,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 	$(FC) $(FFLAGS) $(COMPILER_TAG) $(MANFLAGS) -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_omp.$(tagHere).so libfunctions_acc.$(tagHere).so
-	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_omp.$(tagF).dynamicManaged -lfunctions_acc.$(tagF).dynamicManaged -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_omp.$(tagF).dynamicManaged -lfunctions_acc.$(tagF).dynamicManaged -o $@
 
 ##!##.PHONY: dynamicAccPreload
 ##!##dynamicAccPreload: laplace_acc-omp.dynaccpre.exe libfunctions_omp.so libfunctions_acc.so 
@@ -292,7 +292,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOADACC_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.dynaccpre.exe: laplace_acc-omp.dynaccpre.o libfunctions_omp.so libfunctions_acc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp -lfunctions_acc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp -lfunctions_acc -o $@ $<
 ##!##
 ##!##.PHONY: dynamicOmpPreload
 ##!##dynamicOmpPreload: laplace_acc-omp.dynomppre.exe libfunctions_omp.so libfunctions_acc.so 
@@ -301,7 +301,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_
 ##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOADOMP_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.dynomppre.exe: laplace_acc-omp.dynomppre.o libfunctions_omp.so libfunctions_acc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp -lfunctions_acc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp -lfunctions_acc -o $@ $<
 ##!##
 ##!##.PHONY: dynamicNoPreload
 ##!##dynamicNoPreload: laplace_acc-omp.dynnopre.exe libfunctions_omp.so libfunctions_acc.so 
@@ -310,7 +310,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_
 ##!##	$(FC) $(FFLAGS) $(COMPILER_TAG) -D_NOPRELOAD_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.dynnopre.exe: laplace_acc-omp.dynnopre.o libfunctions_omp.so libfunctions_acc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp -lfunctions_acc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp -lfunctions_acc -o $@ $<
 ##!##
 ##!##.PHONY: dynamicNoPreloadManaged
 ##!##dynamicNoPreloadManaged: laplace_acc-omp.dynnopre-man.exe libfunctions_omp-man.so libfunctions_acc-man.so 
@@ -319,7 +319,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_NOPRELOAD_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.dynnopre-man.exe: laplace_acc-omp.dynnopre-man.o libfunctions_omp-man.so libfunctions_acc-man.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) $(MANFLAGS) -L. -lfunctions_omp-man -lfunctions_acc-man -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $(MANFLAGS) -L. -lfunctions_omp-man -lfunctions_acc-man -o $@ $<
 ##!##
 ##!##.PHONY: libOmpGcc
 ##!##libOmpGcc: libfunctions_omp.gcc.so
@@ -410,49 +410,49 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_
 ##!##dynamic2CompilersAccPreload_ompgcc_accpgi: laplace_acc-omp.dyn2compaccpre.$(FC)main.ompgcc.accpgi.exe libfunctions_omp.gcc.so libfunctions_acc.pgi.so
 ##!##
 ##!##laplace_acc-omp.dyn2compaccpre.$(FC)main.ompgcc.accpgi.exe: laplace_acc-omp.dynaccpre.o libfunctions_omp.gcc.so libfunctions_acc.pgi.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.pgi -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.pgi -o $@ $<
 ##!##
 ##!##.PHONY: dynamic2CompilersAccPreload_ompgcc_accgcc
 ##!##dynamic2CompilersAccPreload_ompgcc_accgcc: laplace_acc-omp.dyn2compaccpre.$(FC)main.ompgcc.accgcc.exe libfunctions_omp.gcc.so libfunctions_acc.gcc.so
 ##!##
 ##!##laplace_acc-omp.dyn2compaccpre.$(FC)main.ompgcc.accgcc.exe: laplace_acc-omp.dynaccpre.o libfunctions_omp.gcc.so libfunctions_acc.gcc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.gcc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.gcc -o $@ $<
 ##!##
 ##!##.PHONY: dynamic2CompilersOmpPreload_ompgcc_accpgi
 ##!##dynamic2CompilersOmpPreload_ompgcc_accpgi: laplace_acc-omp.dyn2compomppre.$(FC)main.ompgcc.accpgi.exe libfunctions_omp.gcc.so libfunctions_acc.pgi.so
 ##!##
 ##!##laplace_acc-omp.dyn2compomppre.$(FC)main.ompgcc.accpgi.exe: laplace_acc-omp.dynomppre.o libfunctions_omp.gcc.so libfunctions_acc.pgi.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.pgi -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.pgi -o $@ $<
 ##!##
 ##!##.PHONY: dynamic2CompilersOmpPreload_ompgcc_accgcc
 ##!##dynamic2CompilersOmpPreload_ompgcc_accgcc: laplace_acc-omp.dyn2compomppre.$(FC)main.ompgcc.accgcc.exe libfunctions_omp.gcc.so libfunctions_acc.gcc.so
 ##!##
 ##!##laplace_acc-omp.dyn2compomppre.$(FC)main.ompgcc.accgcc.exe: laplace_acc-omp.dynomppre.o libfunctions_omp.gcc.so libfunctions_acc.gcc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.gcc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.gcc -o $@ $<
 ##!##
 ##!##.PHONY: dynamic2CompilersNoPreload_ompgcc_accpgi
 ##!##dynamic2CompilersNoPreload_ompgcc_accpgi: laplace_acc-omp.dyn2compnopre.$(FC)main.ompgcc.accpgi.exe libfunctions_omp.gcc.so libfunctions_acc.pgi.so
 ##!##
 ##!##laplace_acc-omp.dyn2compnopre.$(FC)main.ompgcc.accpgi.exe: laplace_acc-omp.dynnopre.o libfunctions_omp.gcc.so libfunctions_acc.pgi.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.pgi -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.pgi -o $@ $<
 ##!##
 ##!##.PHONY: dynamic2CompilersNoPreload_ompgcc_accgcc
 ##!##dynamic2CompilersNoPreload_ompgcc_accgcc: laplace_acc-omp.dyn2compnopre.$(FC)main.ompgcc.accgcc.exe libfunctions_omp.gcc.so libfunctions_acc.gcc.so
 ##!##
 ##!##laplace_acc-omp.dyn2compnopre.$(FC)main.ompgcc.accgcc.exe: laplace_acc-omp.dynnopre.o libfunctions_omp.gcc.so libfunctions_acc.gcc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.gcc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp.gcc -lfunctions_acc.gcc -o $@ $<
 ##!##
 ##!##.PHONY: dynamic2CompilersJustAcc_accpgi
 ##!##dynamic2CompilersJustAcc_accpgi: laplace_acc-omp.dyn2compjustacc.$(FC)main.accpgi.exe libfunctions_acc.pgi.so
 ##!##
 ##!##laplace_acc-omp.dyn2compjustacc.$(FC)main.accpgi.exe: laplace_acc.dyn.o libfunctions_acc.pgi.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_acc.pgi -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_acc.pgi -o $@ $<
 ##!##
 ##!##.PHONY: dynamic2CompilersJustAcc_accgcc
 ##!##dynamic2CompilersJustAcc_accgcc: laplace_acc-omp.dyn2compjustacc.$(FC)main.accgcc.exe libfunctions_acc.gcc.so
 ##!##
 ##!##laplace_acc-omp.dyn2compjustacc.$(FC)main.accgcc.exe: laplace_acc.dyn.o libfunctions_acc.gcc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_acc.gcc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_acc.gcc -o $@ $<
 ##!##
 
 #cpu
@@ -485,7 +485,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 	   $(FC) $(FFLAGS) $(COMPILER_TAG) -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_omp.$(tagHere).so libfunctions_acc.$(tagHere).so
-	   $(FC) $(FFLAGS) $(LIBS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynNoGPU -lfunctions_acc.$(tagF).dynNoGPU -o $@
+	   $(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynNoGPU -lfunctions_acc.$(tagF).dynNoGPU -o $@
 
 #cpu
 .PHONY: accDynamic
@@ -498,7 +498,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 	$(FC) $(FFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_acc.$(tagHere).so
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -o $@
 
 #cpu
 .PHONY: accDynamicManaged
@@ -511,7 +511,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 	$(FC) $(FFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_JUSTACC_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_acc.$(tagHere).so
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_acc.$(tagF).dynamicManaged -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_acc.$(tagF).dynamicManaged -o $@
 
 #cpu
 .PHONY: accDynamicNoPreload
@@ -525,7 +525,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 	$(FC) $(FFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -D_NOPRELOAD_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_acc.$(tagDyn).so
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -o $@
 
 #cpu
 #Bad Notes: nvhpc/22.7 not improving with managed memory: probably a matter of the arrays
@@ -540,7 +540,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 	$(FC) $(FFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_JUSTACC_ -D_NOPRELOAD_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_acc.$(tagDyn).so
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_acc.$(tagF).dynamicManaged -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_acc.$(tagF).dynamicManaged -o $@
 
 #cpu
 .PHONY: ompDynamic
@@ -553,7 +553,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 	$(FC) $(FFLAGS) $(COMPILER_TAG) -D_JUSTOMP_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_omp.$(tagHere).so
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynamic -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynamic -o $@
 
 #cpu
 .PHONY: ompDynamicManaged
@@ -566,7 +566,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 	$(FC) $(FFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_JUSTOMP_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_omp.$(tagHere).so libfunctions_omp.$(tagHere).so
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_omp.$(tagF).dynamicManaged -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_omp.$(tagF).dynamicManaged -o $@
 
 #cpu
 .PHONY: ompDynamicNoPreload
@@ -580,7 +580,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 	$(FC) $(FFLAGS) $(COMPILER_TAG) -D_JUSTOMP_ -D_NOPRELOAD_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_omp.$(tagDyn).so
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynamic -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynamic -o $@
 
 #cpu
 #Bad Notes: nvhpc/22.7 not improving with managed memory: probably a matter of the arrays
@@ -595,7 +595,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 	$(FC) $(FFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_JUSTOMP_ -D_NOPRELOAD_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_omp.$(tagDyn).so
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_omp.$(tagF).dynamicManaged -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_omp.$(tagF).dynamicManaged -o $@
 
 #cpu
 .PHONY: static
@@ -626,7 +626,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 	$(FC) $(FFLAGS) $(COMPILER_TAG) -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagHere).o functions_cpu--sub.$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $^ -o $@
 
 #cpu
 .PHONY: staticManaged
@@ -657,7 +657,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 	$(FC) $(FFLAGS) $(COMPILER_TAG) $(MANFLAGS) -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagHere).o functions_cpu--sub.$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) $(MANFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $(MANFLAGS) $^ -o $@
 
 ##!##.PHONY: staticAccPreload
 ##!##staticAccPreload: laplace_acc-omp.staaccpre.exe
@@ -666,7 +666,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_PRELOADACC_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.staaccpre.exe: laplace_acc-omp.staaccpre.o functions_omp.sta.o functions_acc.sta.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -o $@ $^
 ##!##
 ##!##.PHONY: staticOmpPreload
 ##!##staticOmpPreload: laplace_acc-omp.staomppre.exe
@@ -675,7 +675,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_PRELOADOMP_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.staomppre.exe: laplace_acc-omp.staomppre.o functions_omp.sta.o functions_acc.sta.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -o $@ $^
 ##!##
 ##!##.PHONY: staticNoPreload
 ##!##staticNoPreload: laplace_acc-omp.stanopre.exe
@@ -684,7 +684,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.stanopre.exe: laplace_acc-omp.stanopre.o functions_omp.sta.o functions_acc.sta.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -o $@ $^
 ##!##
 ##!##.PHONY: staticNoGPU
 ##!##tagHere=$(tagF).staticNoGPU
@@ -710,7 +710,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.$(tagHere).exe: laplace_acc-omp.$(tagHere).o globals.$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o
-##!##	$(FC) $(FFLAGS) $(LIBS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) -o $@ $^
 
 ##!##.PHONY: accStatic
 ##!##mixHere=acc
@@ -728,7 +728,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -c -o $@ $<
 ##!##
 ##!##laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(STALIBFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(STALIBFLAGS) -o $@ $^
 
 #cpu
 .PHONY: accStatic
@@ -742,7 +742,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(ACCFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(STALIBFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(STALIBFLAGS) $^ -o $@
 
 
 ##!##.PHONY: accStaticManaged
@@ -752,7 +752,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_JUSTACC_ -c -o $@ $<
 ##!##
 ##!##laplace_acc.staticManaged.exe: laplace_acc.staticManaged.o functions_acc.staticManaged.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(STALIBFLAGS) $(MANFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(STALIBFLAGS) $(MANFLAGS) -o $@ $^
 ##!##
 ##!##.PHONY: accStaticNoPreload
 ##!##accStaticNoPreload: laplace_acc.stanopre.exe
@@ -761,7 +761,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTACC_ -D_NOPRELOAD_ -c -o $@ $<
 ##!##
 ##!##laplace_acc.stanopre.exe: laplace_acc.stanopre.o functions_acc.sta.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(STALIBFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(STALIBFLAGS) -o $@ $^
 ##!##
 ##!##.PHONY: accStaticNoPreloadManaged
 ##!##accStaticNoPreloadManaged: laplace_acc.stanopre-man.exe
@@ -770,7 +770,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_JUSTACC_ -D_NOPRELOAD_ -c -o $@ $<
 ##!##
 ##!##laplace_acc.stanopre-man.exe: laplace_acc.stanopre-man.o functions_acc.staticManaged.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(STALIBFLAGS) $(MANFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(STALIBFLAGS) $(MANFLAGS) -o $@ $^
 ##!##
 
 #cpu
@@ -785,7 +785,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTOMP_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(STALIBFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(STALIBFLAGS) $^ -o $@
 
 ##!##.PHONY: ompStaticManaged
 ##!##mixHere=omp
@@ -806,7 +806,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -c -o $@ $<
 ##!##
 ##!##laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.$(tagHere).o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(STALIBFLAGS) $(MANFLAGSOMP) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(STALIBFLAGS) $(MANFLAGSOMP) -o $@ $^
 
 ##!##.PHONY: ompStaticNoPreload
 ##!##ompStaticNoPreload: laplace_omp.stanopre.exe
@@ -815,7 +815,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) -D_JUSTOMP_ -D_NOPRELOAD_ -c -o $@ $<
 ##!##
 ##!##laplace_omp.stanopre.exe: laplace_omp.stanopre.o functions_omp.sta.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(STALIBFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(STALIBFLAGS) -o $@ $^
 ##!##
 ##!##.PHONY: ompStaticNoPreloadManaged
 ##!##ompStaticNoPreloadManaged: laplace_omp.stanopre-man.exe
@@ -824,7 +824,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(STALIBFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_JUSTOMP_ -D_NOPRELOAD_ -c -o $@ $<
 ##!##
 ##!##laplace_omp.stanopre-man.exe: laplace_omp.stanopre-man.o functions_omp.staticManaged.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(STALIBFLAGS) $(MANFLAGSOMP) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(STALIBFLAGS) $(MANFLAGSOMP) -o $@ $^
 ##!##
 ##!##.PHONY: averageInternalStatic
 ##!##averageInternalStatic: laplace_acc-omp.aveista.exe
@@ -833,7 +833,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_AVERAGE_INTERNAL_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.aveista.exe: laplace_acc-omp.aveista.o functions_omp.sta.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -o $@ $^
 ##!##
 ##!##.PHONY: averageInternalDynamic
 ##!##averageInternalDynamic: laplace_acc-omp.aveidyn.exe
@@ -842,13 +842,13 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_AVERAGE_INTERNAL_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.aveidyn.exe: laplace_acc-omp.aveidyn.o libfunctions_omp.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp -o $@ $<
 ##!##
 ##!##.PHONY: averageInternalDynamicNvc
 ##!##averageInternalDynamicNvc: laplace_acc-omp.aveidynnvc.exe
 ##!##
 ##!##laplace_acc-omp.aveidynnvc.exe: laplace_acc-omp.aveidyn.o libfunctions_omp.nvc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp.nvc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp.nvc -o $@ $<
 ##!##
 ##!##.PHONY: averageNoGPUInternalDynamic
 ##!##averageNoGPUInternalDynamic: laplace_acc-omp.avenogpuidyn.exe
@@ -857,7 +857,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(COMPILER_TAG) -D_AVERAGE_INTERNAL_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.avenogpuidyn.exe: laplace_acc-omp.avenogpuidyn.o libfunctions_omp.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_omp -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_omp -o $@ $<
 ##!##
 ##!##.PHONY: updateInternalStatic
 ##!##updateInternalStatic: laplace_acc-omp.updista.exe
@@ -866,7 +866,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_UPDATE_INTERNAL_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.updista.exe: laplace_acc-omp.updista.o functions_acc.sta.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) -o $@ $^
 ##!##
 ##!##.PHONY: updateInternalDynamic
 ##!##updateInternalDynamic: laplace_acc-omp.updidyn.exe
@@ -875,7 +875,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_UPDATE_INTERNAL_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.updidyn.exe: laplace_acc-omp.updidyn.o libfunctions_acc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) $(OMPFLAGS) -L. -lfunctions_acc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $(OMPFLAGS) -L. -lfunctions_acc -o $@ $<
 ##!##
 ##!##.PHONY: updateNoGPUInternalDynamic
 ##!##updateNoGPUInternalDynamic: laplace_acc-omp.updnogpuidyn.exe
@@ -884,7 +884,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(COMPILER_TAG) -D_UPDATE_INTERNAL_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.updnogpuidyn.exe: laplace_acc-omp.updnogpuidyn.o libfunctions_acc.so
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -L. -lfunctions_acc -o $@ $<
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_acc -o $@ $<
 ##!##
 
 #cpu
@@ -899,7 +899,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTACC_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $^ -o $@
 
 #cpu
 .PHONY: allInternalAccPreloadStructured
@@ -913,7 +913,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_STRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTACC_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $^ -o $@
 
 #cpu
 .PHONY: allInternalAccNoPreload
@@ -927,7 +927,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTACC_ -D_NOPRELOAD_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $^ -o $@
 
 ##!##.PHONY: allInternalAccManaged
 ##!##allInternalAccManaged: laplace_acc.alli-man.exe
@@ -936,7 +936,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_ALL_INTERNAL_ -D_JUSTACC_ -c -o $@ $<
 ##!##
 ##!##laplace_acc.alli-man.exe: laplace_acc.alli-man.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(MANFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(MANFLAGS) -o $@ $^
 ##!##
 
 #cpu
@@ -952,7 +952,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(ACCFLAGS) $(COMPILER_TAG) $(MANFLAGS) -D_ALL_INTERNAL_ -D_JUSTACC_ -D_NOPRELOAD_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(ACCFLAGS) $(MANFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(MANFLAGS) $^ -o $@
 
 #cpu
 .PHONY: allInternalOmp
@@ -966,7 +966,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTOMP_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $^ -o $@
 
 #cpu
 .PHONY: allInternalOmpPreloadStructured
@@ -980,7 +980,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_PRELOAD_STRUCTURED_ -D_ALL_INTERNAL_ -D_JUSTOMP_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $^ -o $@
 
 #cpu
 .PHONY: allInternalOmpNoPreload
@@ -994,7 +994,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_JUSTOMP_ -D_NOPRELOAD_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $^ -o $@
 
 ##!##.PHONY: allInternalOmpManaged
 ##!##allInternalOmpManaged: laplace_omp.alli-man.exe
@@ -1003,7 +1003,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -D_JUSTOMP_ -c -o $@ $<
 ##!##
 ##!##laplace_omp.alli-man.exe: laplace_omp.alli-man.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(MANFLAGSOMP) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(MANFLAGSOMP) -o $@ $^
 ##!##
 
 #cpu
@@ -1019,7 +1019,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -D_JUSTOMP_ -D_NOPRELOAD_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(MANFLAGSOMP) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(MANFLAGSOMP) $^ -o $@
 
 #cpu
 .PHONY: allInternal
@@ -1033,7 +1033,7 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagSta).o f
 	$(FC) $(FFLAGS) $(OMPFLAGS) $(ACCFLAGS) $(COMPILER_TAG) -D_PRELOAD_UNSTRUCTURED_ -D_ALL_INTERNAL_ -c $< -o $@
 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagSta).o functions_cpu--sub.$(tagSta).o globals.o
-	$(FC) $(FFLAGS) $(LIBS) $(OMPFLAGS) $(ACCFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(ACCFLAGS) $^ -o $@
 
 ##!##.PHONY: allInternalManaged
 ##!##allInternalManaged: laplace_acc-omp.alli-man.exe
@@ -1042,7 +1042,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.alli-man.exe: laplace_acc-omp.alli-man.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) $(MANFLAGSOMP) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $(MANFLAGSOMP) -o $@ $^
 ##!##
 ##!##.PHONY: allInternalNoPreload
 ##!##allInternalNoPreload: laplace_acc-omp.allinopre.exe
@@ -1051,7 +1051,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -D_NOPRELOAD_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.allinopre.exe: laplace_acc-omp.allinopre.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -o $@ $^
 ##!##
 ##!##.PHONY: allInternalNoPreloadManaged
 ##!##allInternalNoPreloadManaged: laplace_acc-omp.allinopre-man.exe
@@ -1060,7 +1060,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(ACCFLAGS) $(OMPFLAGS) $(COMPILER_TAG) $(MANFLAGSOMP) -D_ALL_INTERNAL_ -D_NOPRELOAD_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.allinopre-man.exe: laplace_acc-omp.allinopre-man.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(EXEFLAGS) $(MANFLAGSOMP) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $(MANFLAGSOMP) -o $@ $^
 ##!##
 ##!##.PHONY: allInternalNoGPU
 ##!##allInternalNoGPU: laplace_acc-omp.allinogpu.exe
@@ -1069,7 +1069,7 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu
 ##!##	$(FC) $(FFLAGS) $(COMPILER_TAG) -D_ALL_INTERNAL_ -c -o $@ $<
 ##!##
 ##!##laplace_acc-omp.allinogpu.exe: laplace_acc-omp.allinogpu.o
-##!##	$(FC) $(FFLAGS) $(LIBS) $(COMPILER_TAG) -o $@ $^
+##!##	$(FC) $(FFLAGS) $(LDLIBS) $(COMPILER_TAG) -o $@ $^
 
 .PHONY: cleanAll
 cleanAll:

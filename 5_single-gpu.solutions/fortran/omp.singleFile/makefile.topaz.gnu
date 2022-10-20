@@ -2,7 +2,8 @@
 # reset this from the command line for easier making of other test code:
 CLUSTER=topaz
 VENDOR=gnu
-SURNAME=singleTargetBasic
+#SURNAME=singleTargetBasic
+SURNAME=twoTargetsBasic
 
 # --------------------
 CC=gcc

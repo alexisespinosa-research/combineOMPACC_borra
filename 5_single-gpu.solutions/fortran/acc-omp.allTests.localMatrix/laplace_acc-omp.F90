@@ -9,13 +9,14 @@
              use functions_omp
 #         endif
 #      endif
+#      if defined (_NVTX_TRUE_) && defined (_NVHPC_)
+          use nvtx
+#      endif
        implicit none
        double precision, parameter :: MAX_TEMP_ERROR=0.02
        integer, parameter :: CORNEROFFSET=10
-!       double precision, allocatable :: T(:,:)
-!       double precision, allocatable :: T_new(:,:)
-       double precision :: T(GRIDX+2,GRIDY+2)
-       double precision :: T_new(GRIDX+2,GRIDY+2)
+       double precision, allocatable :: T(:,:)
+       double precision, allocatable :: T_new(:,:)
        integer i,j
        integer max_iterations
        integer :: iteration=1 
@@ -36,15 +37,19 @@
        call system_clock(count=start_time)
 
 !---- Allocating the arrays
-!       allocate(T(GRIDX+2,GRIDY+2))
-!       allocate(T_new(GRIDX+2,GRIDY+2))
+       allocate(T(GRIDX+2,GRIDY+2))
+       allocate(T_new(GRIDX+2,GRIDY+2))
 
 !---------- Initialising arrays in the host
-       call init(T)
+       !call init_linear128(T)
+       call init_fixedIndexVal(T)
 
 !---------- Preloading arrays into the GPU. Default is to use OpenACC,
 !           both as function and internal
 !           Using "enter data" both in functions and internal pragmas
+#      if defined (_NVTX_TRUE_) && defined (_NVHPC_)
+          call nvtxStartRange("Data into GPU")
+#      endif
 #      ifndef _NOPRELOAD_
 #         if defined (_PRELOAD_UNSTRUCTURED_) && defined (_ALL_INTERNAL_)
 #            if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
@@ -70,6 +75,9 @@
 #            endif
 #         endif
 #      endif
+#      if defined (_NVTX_TRUE_) && defined (_NVHPC_)
+          call nvtxEndRange
+#      endif
 
 !--------- Simulation while loop
        do while ((dt.gt.MAX_TEMP_ERROR).and. &
@@ -79,6 +87,9 @@
           dt=0.0 
 
 !         --- Average loop: default is OpenACC function
+#         if defined (_NVTX_TRUE_) && defined (_NVHPC_)
+             call nvtxStartRange("Average loop")
+#         endif
 #         if defined (_AVERAGE_INTERNAL_) || defined (_ALL_INTERNAL_)
 #            ifndef _JUSTOMP_ 
 !$acc           parallel loop copy(T) copyout(T_new) collapse(2)
@@ -106,8 +117,14 @@
                 call getAverage_omp(T,T_new)
 #            endif
 #         endif
+#         if defined (_NVTX_TRUE_) && defined (_NVHPC_)
+             call nvtxEndRange
+#         endif
 
 !         --- Update loop (and calculation of max diff): default is with OpenMP
+#         if defined (_NVTX_TRUE_) && defined (_NVHPC_)
+             call nvtxStartRange("Update loop")
+#         endif
 #         if defined (_UPDATE_INTERNAL_) || defined (_ALL_INTERNAL_)
 #            ifndef _JUSTACC_ 
 !$omp           target teams map(tofrom:T) map(to:T_new) map(tofrom:dt) reduction(max:dt)
@@ -136,12 +153,15 @@
                 dt= updateT_acc(T,T_new,dt)
 #            endif
 #         endif
+#         if defined (_NVTX_TRUE_) && defined (_NVHPC_)
+             call nvtxEndRange
+#         endif
 
 !         --- periodically print largest change
           if (mod(iteration,100).eq.0) then
              print "(a,i4.0,a,f15.10,a,f15.10)",'Iteration ',iteration,&
-                   ', dt ',dt,', T[GX-CO][GY-CO]=',&
-                   T(GRIDX-CORNEROFFSET,GRIDY-CORNEROFFSET)
+                   ', dt ',dt,', T[GXB-CO][GYB-CO]=',&
+                   T(GRIDX+2-CORNEROFFSET,GRIDY+2-CORNEROFFSET)
           end if  
            
           iteration=iteration+1        
@@ -152,6 +172,9 @@
 !      OpenACC is used as default only for the STRUCTURED case where
 !      "end data" closing pragmas need to conincide with the opening
 !      ones before the while loop
+#      if defined (_NVTX_TRUE_) && defined (_NVHPC_)
+          call nvtxStartRange("Data into Host")
+#      endif
 #      ifndef _NOPRELOAD_
 #         if defined (_PRELOAD_UNSTRUCTURED_) && defined (_ALL_INTERNAL_)
 #            if defined(_JUSTACC_) || defined(_PRELOADACC_)
@@ -178,11 +201,14 @@
 #            endif
 #         endif
 #      endif
+#      if defined (_NVTX_TRUE_) && defined (_NVHPC_)
+          call nvtxEndRange
+#      endif
 
 !---- Do we have T in the host ready to be saved?
       print "(a,i4.0,a,f15.10,a,f15.10)",'Final values, iteration ',&
-            iteration,', dt ',dt,', T[GX-CO][GY-CO]=',&
-            T(GRIDX-CORNEROFFSET,GRIDY-CORNEROFFSET)
+            iteration,', dt ',dt,', T[GXB-CO][GYB-CO]=',&
+            T(GRIDX+2-CORNEROFFSET,GRIDY+2-CORNEROFFSET)
            
  
        call system_clock(count=stop_time)
