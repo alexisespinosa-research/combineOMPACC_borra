@@ -1,0 +1,18 @@
+ROCM_PATH ?= /opt/rocm
+CC=$(ROCM_PATH)/llvm/bin/clang
+ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+ROCM_GPU ?= gfx90a
+CFLAGS=-O3 -g -fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) -march=$(ROCM_GPU)
+LIBS=-lm
+
+laplace_mp: laplace_mp.o
+        $(CC) $(CFLAGS) $(LIBS) -o $@.exe $^
+
+testMulti: testMulti.o
+        $(CC) $(CFLAGS) $(LIBS) -o $@.exe $^
+
+%.o: %.c
+        $(CC) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -f *.exe *.o

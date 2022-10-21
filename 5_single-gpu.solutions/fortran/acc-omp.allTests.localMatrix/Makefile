@@ -138,6 +138,18 @@ endif
 #  Specific settings for lumi
 ifeq ($(CLUSTER),lumi)
 	GPU_ARCH=gfx90a
+	ROCM_PATH ?= /opt/rocm
+	ROCM_LLVM = $(ROCM_PATH)/llvm
+	ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+
+	INSTALLED_GPU = $(GPU_ARCH)
+	ROCM_GPU ?= $(INSTALLED_GPU)
+
+	ifeq ($(TARGETS),)
+	   TARGETS =-march=$(ROCM_GPU)
+	endif
+
+	LFLAGS =
 	ifeq ($(VENDOR),cray)
 		CC=cc
 		FC=ftn
@@ -145,9 +157,10 @@ ifeq ($(CLUSTER),lumi)
 		ACCFLAGS=-hacc
 		MANFLAGS=
 		MANFLAGSOMP=
+		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		LDFLAGS=$(OMPFLAGS)
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_CRAY_
 	endif
 	ifeq ($(VENDOR),gnu)
@@ -157,10 +170,51 @@ ifeq ($(CLUSTER),lumi)
 		ACCFLAGS=-fopenacc
 		MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
 		MANFLAGSOMP=
+		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
-		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
-		LDFLAGS=$(OMPFLAGS)
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_GNU_
+	endif
+	ifeq ($(VENDOR),aocc)
+		CC=cc 
+		FC=ftn
+		#OMPFLAGS =-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
+		OMPFLAGS=-fopenmp
+		ACCFLAGS=-hacc
+		MANFLAGS=
+		MANFLAGSOMP=
+		STALIBFLAGS=
+		DYNLIBFLAGS=-shared -fPIC
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS)
+		COMPILER_TAG=-D_FLANG_
+	endif
+	ifeq ($(VENDOR),rocm-llvm)
+		CC = $(ROCM_LLVM)/bin/clang
+		FC =$(ROCM_LLVM)/bin/flang
+		OMPFLAGS =-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
+		ACCFLAGS=-hacc
+		MANFLAGS=
+		MANFLAGSOMP=
+		STALIBFLAGS=
+		DYNLIBFLAGS=-shared -fPIC
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS)
+		COMPILER_TAG=-D_FLANG_
+	endif
+	ifeq ($(VENDOR),rocm-amd)
+		CC = $(ROCM_LLVM)/bin/amdclang
+		FC =$(ROCM_LLVM)/bin/amdflang
+		OMPFLAGS =-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
+		ACCFLAGS=-hacc
+		MANFLAGS=
+		MANFLAGSOMP=
+		STALIBFLAGS=
+		DYNLIBFLAGS=-shared -fPIC
+		#EXEFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		EXEFLAGS=$(OMPFLAGS)
+		COMPILER_TAG=-D_FLANG_
 	endif
 endif
 
