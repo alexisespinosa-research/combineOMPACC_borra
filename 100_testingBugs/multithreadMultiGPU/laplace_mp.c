@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     gettimeofday(&start_time,NULL); 
 
     init();                  
-    //num_devices = omp_get_num_devices();
+    num_devices = omp_get_num_devices();
 
     #pragma omp parallel default(shared) firstprivate(num_threads, thread_id, num_devices, device_id, i_start, i_end, chunk_size,dt,iteration,i,j)
     {
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     num_threads = omp_get_num_threads();
     thread_id  = omp_get_thread_num();
 
-    num_devices = omp_get_num_devices();
+    //num_devices = omp_get_num_devices();
     device_id  = thread_id % num_devices;
     omp_set_default_device(device_id);
 
