@@ -7,7 +7,7 @@ using namespace std;
 // grid size
 #define GRIDS    8192
 #define NUM_THREADS 2
-#define NUM_DEVICES 2
+//#define NUM_DEVICES 2
 
 struct thread_data
 {
@@ -67,7 +67,6 @@ void *operateMatrix(void *threadarg)
           //thread_id,i_end,T_new[i_end-1][m-1]);
           thread_id,i_end,*((T_new+(i_end-1)*m)+(n-1)));
    pthread_exit(NULL);
-   //printf("Finished matrix operations\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -136,5 +135,4 @@ int main(int argc, char *argv[]) {
     }
 
     cout << "Main(): program exiting." << endl;
-    //pthread_exit(NULL);
 }

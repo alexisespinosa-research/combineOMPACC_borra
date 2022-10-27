@@ -54,8 +54,11 @@ int main(int argc, char *argv[]) {
     thread_id  = omp_get_thread_num();
 
     num_devices = omp_get_num_devices();
+    //num_devices = 2;
     device_id  = thread_id % num_devices;
     omp_set_default_device(device_id);
+    printf("num_threads=%d, thread_id=%d, num_devices=%d, device_id=%d\n",
+           num_threads, thread_id, num_devices, device_id);
 
     // calculate the chunk size based on number of threads
     chunk_size=ceil((1.0*GRIDX)/num_threads);
@@ -90,7 +93,7 @@ int main(int argc, char *argv[]) {
         #pragma omp barrier
 
         // compute the largest change and copy T_new to T
-        #pragma omp target map(dt)
+        #pragma omp target map(dt) device(device_id)
         #pragma omp teams distribute parallel for collapse(2) reduction(max:dt)
         for(i = i_start; i <= i_end; i++){
             for(j = 1; j <= GRIDY; j++){
