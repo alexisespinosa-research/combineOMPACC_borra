@@ -1,0 +1,19 @@
+CC=gcc
+ROCM_PATH ?= /opt/rocm
+ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+ROCM_GPU ?= gfx908
+
+CFLAGS= -O3 -fopenmp
+LIBS=-lm
+
+laplace_mp: laplace_mp.o
+	$(CC) $(CFLAGS) $(LIBS) -o $@.exe $^
+
+testMulti: testMulti.o
+	$(CC) $(CFLAGS) $(LIBS) -o $@.exe $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -f *.exe *.o

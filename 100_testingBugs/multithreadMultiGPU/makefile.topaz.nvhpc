@@ -1,0 +1,17 @@
+CC=nvc
+GPU_ARCH=cc70
+
+CFLAGS= -O3 -mp=gpu -Minfo=accel,mp -gpu=$(GPU_ARCH)
+LIBS=-lm
+
+laplace_mp: laplace_mp.o
+	$(CC) $(CFLAGS) $(LIBS) -o $@.exe $^
+
+testMulti: testMulti.o
+	$(CC) $(CFLAGS) $(LIBS) -o $@.exe $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -f *.exe *.o

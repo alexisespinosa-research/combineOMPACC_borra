@@ -1,9 +1,8 @@
-ROCM_PATH ?= /opt/rocm
-CC=$(ROCM_PATH)/llvm/bin/clang
-CPP=$(ROCM_PATH)/llvm/bin/clang++
-ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
-ROCM_GPU ?= gfx908
-CFLAGS=-O3 -g -fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) -march=$(ROCM_GPU)
+CC=gcc
+CPP=g++
+GPU_ARCH=cc70
+
+CFLAGS= -O3 -fopenmp
 LIBS=-lm
 
 laplace_mp: laplace_mp.o
