@@ -1,19 +1,32 @@
 # --------------------
 # reset this from the command line for easier making of other test code:
 CLUSTER=mulan
-VENDOR=cray
+VENDOR=rocm-llvm
 #MPISURNAME=noblock_mpiHOST
 MPISURNAME=noblock_mpiGPU
 #SURNAME=singleTargetBasic
 SURNAME=twoTargetsBasic
 
 # --------------------
-CC=cc
-F90=ftn
-CFLAGS=-O3 -fopenmp -rm
-FFLAGS=-O3 -homp -rm
+GPU_ARCH=gfx908
+ROCM_PATH ?= /opt/rocm-4.5.0
+ROCM_LLVM = $(ROCM_PATH)/llvm
+ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+
+INSTALLED_GPU = $(GPU_ARCH)
+ROCM_GPU ?= $(INSTALLED_GPU)
+
+ifeq ($(TARGETS),)
+	TARGETS =-march=$(ROCM_GPU)
+endif
+
+# --------------------
+CC=$(ROCM_LLVM)/bin/clang
+F90=$(ROCM_LLVM)/bin/mpif90
+CFLAGS=-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
+FFLAGS=-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
 LIBS=
-COMPILER_TAG=-D_CRAY_
+COMPILER_TAG=-D_FLANG_
 OBJ=laplace_omp.$(MPISURNAME).$(SURNAME).o
 TARGET=laplace_omp.$(MPISURNAME).$(SURNAME).exe
 

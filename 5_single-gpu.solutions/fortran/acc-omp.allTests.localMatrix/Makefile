@@ -8,7 +8,7 @@ CLUSTER=amd
 #VENDOR=gnu
 #VENDOR=nvhpc
 #VENDOR=cray
-VENDOR=rocm
+VENDOR=rocm-llvm
 
 SURNAME=singleTargetBasic
 

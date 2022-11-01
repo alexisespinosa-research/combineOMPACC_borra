@@ -1,0 +1,17 @@
+ROCM_PATH ?= /opt/rocm
+FC=$(ROCM_PATH)/llvm/bin/flang
+ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+ROCM_GPU ?= gfx908
+FFLAGS=-O3 -fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) -march=$(ROCM_GPU)
+LIBS=
+OBJ=updateSubarray.o
+TARGET=updateSubarray
+
+%.o: %.f90
+	$(FC) $(FFLAGS) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(FC) $(FFLAGS) $(LIBS) -o $@ $^
+
+clean:
+	rm -f $(TARGET) *.o
