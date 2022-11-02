@@ -1,0 +1,23 @@
+CC=cc
+CPP=CC
+#CFLAGS= -O3 -g -fopenmp #The GPU settings are catched by the cc wrapper when craype-accel.. module is loaded
+CFLAGS= -O3 -fopenmp #The GPU settings are catched by the cc wrapper when craype-accel.. module is loaded
+LIBS=-lm
+
+laplace_mp: laplace_mp.o
+	$(CC) $(CFLAGS) $(LIBS) -o $@.exe $^
+
+testMulti: testMulti.o
+	$(CC) $(CFLAGS) $(LIBS) -o $@.exe $^
+
+testCPPMulti: testCPPMulti.o
+	$(CPP) $(CFLAGS) $(LIBS) -o $@.exe $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+%.o: %.cpp
+	$(CPP) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -f *.exe *.o

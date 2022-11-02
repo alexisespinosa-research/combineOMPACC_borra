@@ -1,0 +1,15 @@
+CC=cc
+CFLAGS= -O3 -g -fopenmp #The GPU settings are catched by the cc wrapper when craype-accel.. module is loaded
+#CFLAGS= -O3 -fopenmp #The GPU settings are catched by the cc wrapper when craype-accel.. module is loaded
+LIBS=-lm
+OBJ=testReduction.o
+TARGET=testReduction
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+
+clean:
+	rm -f $(TARGET) *.o

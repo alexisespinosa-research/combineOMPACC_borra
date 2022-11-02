@@ -131,8 +131,8 @@
           !$omp end target teams
 
           !---- Retrieve own-edge data from the GPU:
-          !$omp target update from(Tp(1:local_nx,1:1))
-          !$omp target update from(Tp(1:local_nx,local_ny:local_ny))
+          !$aeg-omp target update from(Tp(1:local_nx,1:1))
+          !$aeg-omp target update from(Tp(1:local_nx,local_ny:local_ny))
 
           !---- send own-left-edge into the neigh-left-right-halo region
           !   - and receive from neigh-left-right-edge into own-left-halo region
@@ -150,8 +150,8 @@
           !---- send own-right-edge into the neigh-right-left-halo region
           !   - and receive data neigh-right-left-edge into own-right-halo region
           if (myrank.lt.csize-1) then
-             !print *,'Start to deal with right'
              !$omp target data use_device_ptr(Tp)
+             !print *,'Start to deal with right'
              call mpi_isend(Tp(1,local_ny),local_nx, MPI_DOUBLE,& 
                            myrank+1,0,MPI_COMM_WORLD,requests(3),ierr)
              call mpi_irecv(Tp(1,local_ny+1),local_nx, MPI_DOUBLE,&
@@ -166,8 +166,8 @@
           !print *,'End waiting all'
 
           !---- Send recently-updated own-halo data to the GPU:
-          !$omp target update to(Tp(1:local_nx,0:0))
-          !$omp target update to(Tp(1:local_nx,local_ny+1:local_ny+1))
+          !$aeg-mp target update to(Tp(1:local_nx,0:0))
+          !$aeg-mp target update to(Tp(1:local_nx,local_ny+1:local_ny+1))
 
           !---- reduce the dt value among all MPI ranks
           call mpi_allreduce(dt, dt_world, 1, MPI_DOUBLE,&
