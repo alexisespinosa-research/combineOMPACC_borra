@@ -38,7 +38,8 @@
        call mpi_comm_rank(MPI_COMM_WORLD, myrank, ierr)
 
 ! -------- Choosing device
-       call omp_set_default_device(myrank)
+       !aeg:call omp_set_default_device(myrank)
+       call acc_set_device_num(myrank)
 
 ! -------- Checking arguments are correct
        if (myrank == 0) then
@@ -96,7 +97,8 @@
 ! --------- Simulation Iterations
        start_time=MPI_Wtime()
        requests=MPI_REQUEST_NULL
-       !$omp target enter data map(to:Tp) map(alloc:Tp_new)
+       !$aeg-omp target enter data map(to:Tp) map(alloc:Tp_new)
+       !$acc enter data copyin(Tp) create(Tp_new)
        do while ((dt_world.gt.MAX_TEMP_ERROR).and. &
                 (iteration.le.max_iterations))
 
@@ -105,20 +107,23 @@
           dt_world=0.0
 
           !main computational kernel, average over neighbours in the grid
-          !$omp target teams
-          !$omp distribute parallel do collapse(2)
+          !$aeg-omp target teams
+          !$aeg-omp distribute parallel do collapse(2)
+          !$acc parallel loop collapse(2)
           do j=1,local_ny
              do i=1,local_nx
                 !T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
                 Tp_new(i,j)=0.25*(Tp(i+1,j)+Tp(i-1,j)+Tp(i,j+1)+Tp(i,j-1))
              end do
           end do 
-          !$omp end distribute parallel do
-          !$omp end target teams
+          !$acc end parallel loop
+          !$aeg-omp end distribute parallel do
+          !$aeg-omp end target teams
 
           !compute the largest change and copy T_new to T 
-          !$omp target teams map(dt) reduction(max:dt)
-          !$omp distribute parallel do collapse(2) reduction(max:dt)
+          !$aeg-omp target teams map(dt) reduction(max:dt)
+          !$aeg-omp distribute parallel do collapse(2) reduction(max:dt)
+          !$acc parallel loop collapse(2) reduction(max:dt)
           do j=1,local_ny
              do i=1,local_nx
                 !dt = max(abs(T_new(i,j)-T(i,j)),dt)
@@ -127,37 +132,44 @@
                 Tp(i,j)=Tp_new(i,j)
              end do
           end do
-          !$omp end distribute parallel do
-          !$omp end target teams
+          !$acc end parallel loop
+          !$aeg-omp end distribute parallel do
+          !$aeg-omp end target teams
 
           !---- Retrieve own-edge data from the GPU:
           !$aeg-omp target update from(Tp(1:local_nx,1:1))
           !$aeg-omp target update from(Tp(1:local_nx,local_ny:local_ny))
+          !$aeg-acc update self(Tp(1:local_nx,1:1))
+          !$aeg-acc update self(Tp(1:local_nx,local_ny:local_ny))
 
           !---- send own-left-edge into the neigh-left-right-halo region
           !   - and receive from neigh-left-right-edge into own-left-halo region
           if (myrank.gt.0) then
-             !$omp target data use_device_ptr(Tp)
+             !$aeg-omp target data use_device_ptr(Tp)
+             !$acc host_data use_device(Tp)
              !print *,'Start to deal with left'
              call mpi_isend(Tp(1,1),local_nx, MPI_DOUBLE,&
                            myrank-1,0,MPI_COMM_WORLD,requests(1),ierr)
              call mpi_irecv(Tp(1,0),local_nx, MPI_DOUBLE,&
                            myrank-1,0,MPI_COMM_WORLD,requests(2),ierr)
              !print *,'End to deal with left'
-             !$omp end target data
+             !$acc end host_data
+             !$aeg-omp end target data
           end if
 
           !---- send own-right-edge into the neigh-right-left-halo region
           !   - and receive data neigh-right-left-edge into own-right-halo region
           if (myrank.lt.csize-1) then
-             !$omp target data use_device_ptr(Tp)
+             !$aeg-omp target data use_device_ptr(Tp)
+             !$acc host_data use_device(Tp)
              !print *,'Start to deal with right'
              call mpi_isend(Tp(1,local_ny),local_nx, MPI_DOUBLE,& 
                            myrank+1,0,MPI_COMM_WORLD,requests(3),ierr)
              call mpi_irecv(Tp(1,local_ny+1),local_nx, MPI_DOUBLE,&
                            myrank+1,0,MPI_COMM_WORLD,requests(4),ierr)
              !print *,'End to deal with right'
-             !$omp end target data
+             !$acc end host_data
+             !$aeg-omp end target data
           end if
 
           !---- Waiting for the MPI messages to finalise
@@ -166,8 +178,10 @@
           !print *,'End waiting all'
 
           !---- Send recently-updated own-halo data to the GPU:
-          !$aeg-mp target update to(Tp(1:local_nx,0:0))
-          !$aeg-mp target update to(Tp(1:local_nx,local_ny+1:local_ny+1))
+          !$aeg-omp target update to(Tp(1:local_nx,0:0))
+          !$aeg-omp target update to(Tp(1:local_nx,local_ny+1:local_ny+1))
+          !$aeg-acc update device(Tp(1:local_nx,0:0))
+          !$aeg-acc update device(Tp(1:local_nx,local_ny+1:local_ny+1))
 
           !---- reduce the dt value among all MPI ranks
           call mpi_allreduce(dt, dt_world, 1, MPI_DOUBLE,&
@@ -184,7 +198,8 @@
 
           iteration=iteration+1        
        end do
-       !$omp target exit data map(from:Tp) map(delete:Tp_new)
+       !$aeg-omp target exit data map(from:Tp) map(delete:Tp_new)
+       !$acc exit data copyout(Tp) delete(Tp_new)
        print "(a,i4,2(a,f15.10),2(a,i2),(a,f15.10))",&
        'Iteration ',iteration,', dt ',dt,', dt_world=',dt_world,&
        ',T(GXB-',CX,',GYB-',CY,')=',Tp(local_nx+1-CX,local_ny+1-CY)
