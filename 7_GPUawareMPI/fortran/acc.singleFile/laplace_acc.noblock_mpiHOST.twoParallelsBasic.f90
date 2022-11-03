@@ -19,8 +19,6 @@
        integer, parameter :: CX=10,CY=10
        double precision, allocatable, target ::  T(:,:)
        double precision, allocatable, target ::  T_new(:,:)
-       double precision, pointer ::  Tp(:,:)
-       double precision, pointer ::  Tp_new(:,:)
        integer i,j
        integer max_iterations
        integer :: iteration=1 
@@ -89,18 +87,16 @@
 ! --------- Allocating and Initialising distributed array
        allocate(T(0:local_nx+1,0:local_ny+1))
        allocate(T_new(0:local_nx+1,0:local_ny+1))
-       Tp=>T
-       Tp_new=>T_new
        print *, 'myrank=',myrank,', Passed pointer pointing'
-       !call init_linear128(Tp,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
-       call init_fixedIndexVal(Tp,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
-       !print *,Tp
+       !call init_linear128(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       call init_fixedIndexVal(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       !print *,T
 
 ! --------- Simulation Iterations
        start_time=MPI_Wtime()
        requests=MPI_REQUEST_NULL
-       !$aeg-omp target enter data map(to:Tp) map(alloc:Tp_new)
-       !$acc enter data copyin(Tp) create(Tp_new)
+       !$aeg-omp target enter data map(to:T) map(alloc:T_new)
+       !$acc enter data copyin(T) create(T_new)
        do while ((dt_world.gt.MAX_TEMP_ERROR).and. &
                 (iteration.le.max_iterations))
 
@@ -114,8 +110,7 @@
           !$acc parallel loop collapse(2)
           do j=1,local_ny
              do i=1,local_nx
-                !T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
-                Tp_new(i,j)=0.25*(Tp(i+1,j)+Tp(i-1,j)+Tp(i,j+1)+Tp(i,j-1))
+                T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
              end do
           end do 
           !$acc end parallel loop
@@ -128,10 +123,8 @@
           !$acc parallel loop collapse(2) reduction(max:dt)
           do j=1,local_ny
              do i=1,local_nx
-                !dt = max(abs(T_new(i,j)-T(i,j)),dt)
-                !T(i,j)=T_new(i,j)
-                dt = max(abs(Tp_new(i,j)-Tp(i,j)),dt)
-                Tp(i,j)=Tp_new(i,j)
+                dt = max(abs(T_new(i,j)-T(i,j)),dt)
+                T(i,j)=T_new(i,j)
              end do
           end do
           !$acc end parallel loop
@@ -139,38 +132,38 @@
           !$aeg-omp end target teams
 
           !---- Retrieve own-edge data from the GPU:
-          !$aeg-omp target update from(Tp(1:local_nx,1:1))
-          !$aeg-omp target update from(Tp(1:local_nx,local_ny:local_ny))
-          !$aeg-acc update self(Tp(1:local_nx,1:1))
-          !$aeg-acc update self(Tp(1:local_nx,local_ny:local_ny))
+          !$aeg-omp target update from(T(1:local_nx,1:1))
+          !$aeg-omp target update from(T(1:local_nx,local_ny:local_ny))
+          !$acc update self(T(1:local_nx,1:1))
+          !$acc update self(T(1:local_nx,local_ny:local_ny))
 
           !---- send own-left-edge into the neigh-left-right-halo region
           !   - and receive from neigh-left-right-edge into own-left-halo region
           if (myrank.gt.0) then
-             !$aeg-omp target data use_device_ptr(Tp)
-             !$acc host_data use_device(Tp)
+             !$aeg-omp target data use_device_ptr(T)
+             !$aeg-acc host_data use_device(T)
              !print *,'Start to deal with left'
-             call mpi_isend(Tp(1,1),local_nx, MPI_DOUBLE,&
+             call mpi_isend(T(1,1),local_nx, MPI_DOUBLE,&
                            myrank-1,0,MPI_COMM_WORLD,requests(1),ierr)
-             call mpi_irecv(Tp(1,0),local_nx, MPI_DOUBLE,&
+             call mpi_irecv(T(1,0),local_nx, MPI_DOUBLE,&
                            myrank-1,0,MPI_COMM_WORLD,requests(2),ierr)
              !print *,'End to deal with left'
-             !$acc end host_data
+             !$aeg-acc end host_data
              !$aeg-omp end target data
           end if
 
           !---- send own-right-edge into the neigh-right-left-halo region
           !   - and receive data neigh-right-left-edge into own-right-halo region
           if (myrank.lt.csize-1) then
-             !$aeg-omp target data use_device_ptr(Tp)
-             !$acc host_data use_device(Tp)
+             !$aeg-omp target data use_device_ptr(T)
+             !$aeg-acc host_data use_device(T)
              !print *,'Start to deal with right'
-             call mpi_isend(Tp(1,local_ny),local_nx, MPI_DOUBLE,& 
+             call mpi_isend(T(1,local_ny),local_nx, MPI_DOUBLE,& 
                            myrank+1,0,MPI_COMM_WORLD,requests(3),ierr)
-             call mpi_irecv(Tp(1,local_ny+1),local_nx, MPI_DOUBLE,&
+             call mpi_irecv(T(1,local_ny+1),local_nx, MPI_DOUBLE,&
                            myrank+1,0,MPI_COMM_WORLD,requests(4),ierr)
              !print *,'End to deal with right'
-             !$acc end host_data
+             !$aeg-acc end host_data
              !$aeg-omp end target data
           end if
 
@@ -180,10 +173,10 @@
           !print *,'End waiting all'
 
           !---- Send recently-updated own-halo data to the GPU:
-          !$aeg-omp target update to(Tp(1:local_nx,0:0))
-          !$aeg-omp target update to(Tp(1:local_nx,local_ny+1:local_ny+1))
-          !$aeg-acc update device(Tp(1:local_nx,0:0))
-          !$aeg-acc update device(Tp(1:local_nx,local_ny+1:local_ny+1))
+          !$aeg-omp target update to(T(1:local_nx,0:0))
+          !$aeg-omp target update to(T(1:local_nx,local_ny+1:local_ny+1))
+          !$acc update device(T(1:local_nx,0:0))
+          !$acc update device(T(1:local_nx,local_ny+1:local_ny+1))
 
           !---- reduce the dt value among all MPI ranks
           call mpi_allreduce(dt, dt_world, 1, MPI_DOUBLE,&
@@ -194,18 +187,18 @@
           !if (mod(iteration,1).eq.0) then
              print "(a,i4,2(a,f15.10),2(a,i2),(a,f15.10))",&
              'Iteration ',iteration,', dt ',dt,', dt_world=',dt_world,&
-             ',T(GXB-',CX,',GYB-',CY,')=',Tp(local_nx+1-CX,local_ny+1-CY)
-             !print *, Tp
+             ',T(GXB-',CX,',GYB-',CY,')=',T(local_nx+1-CX,local_ny+1-CY)
+             !print *, T
           end if  
 
           iteration=iteration+1        
        end do
-       !$aeg-omp target exit data map(from:Tp) map(delete:Tp_new)
-       !$acc exit data copyout(Tp) delete(Tp_new)
+       !$aeg-omp target exit data map(from:T) map(delete:T_new)
+       !$acc exit data copyout(T) delete(T_new)
        print "(a,i4,2(a,f15.10),2(a,i2),(a,f15.10))",&
        'Iteration ',iteration,', dt ',dt,', dt_world=',dt_world,&
-       ',T(GXB-',CX,',GYB-',CY,')=',Tp(local_nx+1-CX,local_ny+1-CY)
-       !print *, Tp
+       ',T(GXB-',CX,',GYB-',CY,')=',T(local_nx+1-CX,local_ny+1-CY)
+       !print *, T
 
        stop_time=MPI_Wtime()
        elapsed_time=stop_time-start_time

@@ -2,13 +2,14 @@
 # reset this from the command line for easier making of other test code:
 #CLUSTER=topaz
 #CLUSTER=mulan
-#CLUSTER=lumi
-CLUSTER=amd
+CLUSTER=lumi
+#CLUSTER=amd
 
 #VENDOR=gnu
 #VENDOR=nvhpc
 #VENDOR=cray
-VENDOR=rocm-llvm
+#VENDOR=rocm-llvm
+VENDOR=aocc
 
 SURNAME=singleTargetBasic
 
@@ -181,7 +182,7 @@ ifeq ($(CLUSTER),lumi)
 		FC=ftn
 		#OMPFLAGS =-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
 		OMPFLAGS=-fopenmp
-		ACCFLAGS=-hacc
+		ACCFLAGS=-fopenacc
 		MANFLAGS=
 		MANFLAGSOMP=
 		STALIBFLAGS=

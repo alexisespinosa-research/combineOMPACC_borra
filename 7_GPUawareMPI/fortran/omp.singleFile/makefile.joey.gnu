@@ -1,20 +1,34 @@
 # --------------------
 # reset this from the command line for easier making of other test code:
 CLUSTER=joey
-VENDOR=cray
+VENDOR=gnu
 #MPISURNAME=noblock_mpiHOST
 MPISURNAME=noblock_mpiGPU
 #SURNAME=singleTargetBasic
 SURNAME=twoTargetsBasic
 
 # --------------------
+GPU_ARCH=gfx90a
+ROCM_PATH ?= /opt/rocm
+ROCM_LLVM = $(ROCM_PATH)/llvm
+ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+
+INSTALLED_GPU = $(GPU_ARCH)
+ROCM_GPU ?= $(INSTALLED_GPU)
+
+ifeq ($(TARGETS),)
+        TARGETS =-march=$(ROCM_GPU)
+endif
+
+# --------------------
 CC=cc
 F90=ftn
-CFLAGS=-O3 -fopenmp -rm
-FFLAGS=-O3 -homp -rm
+CFLAGS=-O3 -fopenmp -foffload=$(ROCM_GPUTARGET) $(TARGETS)
+#FFLAGS=-O3 -fopenmp -foffload=$(ROCM_GPUTARGET) $(TARGETS)
+FFLAGS=-O3 -fopenmp -foffload=default $(TARGETS)
 INCLUDE=-I${ROCM_PATH}/include
 LIBS=-L${ROCM_PATH}/lib -lamdhip64
-COMPILER_TAG=-D_CRAY_
+COMPILER_TAG=-D_GNU_
 OBJ=laplace_omp.$(MPISURNAME).$(SURNAME).o
 TARGET=laplace_omp.$(MPISURNAME).$(SURNAME).exe
 
