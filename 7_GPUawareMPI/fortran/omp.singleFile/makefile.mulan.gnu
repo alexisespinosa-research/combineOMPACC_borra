@@ -1,15 +1,15 @@
 # --------------------
 # reset this from the command line for easier making of other test code:
 CLUSTER=mulan
-VENDOR=rocm-llvm
+VENDOR=gnu
 #MPISURNAME=noblock_mpiHOST
 MPISURNAME=noblock_mpiGPU
 #SURNAME=singleTargetBasic
 SURNAME=twoTargetsBasic
 
 # --------------------
-GPU_ARCH=gfx908
-ROCM_PATH ?= /opt/rocm-4.5.0
+GPU_ARCH=gfx90a
+ROCM_PATH ?= /opt/rocm
 ROCM_LLVM = $(ROCM_PATH)/llvm
 ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
 
@@ -17,26 +17,29 @@ INSTALLED_GPU = $(GPU_ARCH)
 ROCM_GPU ?= $(INSTALLED_GPU)
 
 ifeq ($(TARGETS),)
-	TARGETS =-march=$(ROCM_GPU)
+        TARGETS =-march=$(ROCM_GPU)
 endif
 
 # --------------------
-CC=$(ROCM_LLVM)/bin/clang
-F90=$(ROCM_LLVM)/bin/flang
-#CC=$(ROCM_LLVM)/bin/mpicc
-#F90=$(ROCM_LLVM)/bin/mpif90
-CFLAGS=-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
-FFLAGS=-fopenmp -fopenmp-targets=$(ROCM_GPUTARGET) -Xopenmp-target=$(ROCM_GPUTARGET) $(TARGETS)
-LIBS=
-COMPILER_TAG=-D_FLANG_
+#CC=cc
+#F90=ftn
+CC=mpicc
+F90=mpif90
+#CFLAGS=-O3 -fopenmp -foffload=$(ROCM_GPUTARGET) $(TARGETS)
+#FFLAGS=-O3 -fopenmp -foffload=$(ROCM_GPUTARGET) $(TARGETS)
+CFLAGS=-O3 -fopenmp
+FFLAGS=-O3 -fopenmp
+INCLUDE=-I${ROCM_PATH}/include
+LIBS=-L${ROCM_PATH}/lib -lamdhip64
+COMPILER_TAG=-D_GNU_
 OBJ=laplace_omp.$(MPISURNAME).$(SURNAME).o
 TARGET=laplace_omp.$(MPISURNAME).$(SURNAME).exe
 
 %.o: %.f90
-	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
+	$(F90) $(FFLAGS) $(INCLUDE) $(COMPILER_TAG) -c -o $@ $<
 
 $(TARGET): $(OBJ)
-	$(F90) $(FFLAGS) $(LIBS) -o $@ $^
+	$(F90) $(FFLAGS) $(INCLUDE) $(LIBS) -o $@ $^
 	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
 
 cleanAll:

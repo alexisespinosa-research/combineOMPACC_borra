@@ -1,28 +1,27 @@
 # --------------------
 # reset this from the command line for easier making of other test code:
-CLUSTER=mulan
-VENDOR=cray
+CLUSTER=joey
+VENDOR=gnu
 #MPISURNAME=noblock_mpiHOST
 MPISURNAME=noblock_mpiGPU
-#SURNAME=singleTargetBasic
-SURNAME=twoTargetsBasic
+#SURNAME=singleParallelBasic
+SURNAME=twoParallelsBasic
 
 # --------------------
 CC=cc
 F90=ftn
-CFLAGS=-O3 -fopenmp -rm
-FFLAGS=-O3 -homp -rm
-INCLUDE=-I${ROCM_PATH}/include
-LIBS=-L${ROCM_PATH}/lib -lamdhip64
-COMPILER_TAG=-D_CRAY_
-OBJ=laplace_omp.$(MPISURNAME).$(SURNAME).o
-TARGET=laplace_omp.$(MPISURNAME).$(SURNAME).exe
+CFLAGS=-O3 -fopenacc 
+FFLAGS=-O3 -fopenacc
+LIBS=
+COMPILER_TAG=-D_GNU_
+OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
+TARGET=laplace_acc.$(MPISURNAME).$(SURNAME).exe
 
 %.o: %.f90
-	$(F90) $(FFLAGS) $(INCLUDE) $(COMPILER_TAG) -c -o $@ $<
+	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
 
 $(TARGET): $(OBJ)
-	$(F90) $(FFLAGS) $(INCLUDE) $(LIBS) -o $@ $^
+	$(F90) $(FFLAGS) $(LIBS) -o $@ $^
 	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
 
 cleanAll:

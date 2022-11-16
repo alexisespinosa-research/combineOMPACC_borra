@@ -1,20 +1,20 @@
 # --------------------
 # reset this from the command line for easier making of other test code:
-CLUSTER=mulan
-VENDOR=cray
+CLUSTER=topaz
+VENDOR=gnu
 #MPISURNAME=noblock_mpiHOST
 MPISURNAME=noblock_mpiGPU
 #SURNAME=singleTargetBasic
 SURNAME=twoTargetsBasic
 
 # --------------------
-CC=cc
-F90=ftn
-CFLAGS=-O3 -fopenmp -rm
-FFLAGS=-O3 -homp -rm
-INCLUDE=-I${ROCM_PATH}/include
-LIBS=-L${ROCM_PATH}/lib -lamdhip64
-COMPILER_TAG=-D_CRAY_
+CC=mpicc
+F90=mpif90
+CFLAGS=-O3 -fopenmp
+FFLAGS=-O3 -fopenmp
+INCLUDE=
+LIBS=
+COMPILER_TAG=-D_GNU_
 OBJ=laplace_omp.$(MPISURNAME).$(SURNAME).o
 TARGET=laplace_omp.$(MPISURNAME).$(SURNAME).exe
 
