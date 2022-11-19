@@ -5,12 +5,25 @@
        use iso_c_binding
 
        implicit none
+!========= Swap interface as in HiPSTAR
+       type interface
+          double precision,pointer,contiguous :: swap_out(:,:), swap_in(:,:)
+          integer :: bufferLength
+       contains
+          procedure :: allocateBuffers
+          procedure :: pack
+!          procedure :: send
+!          procedure :: recv
+          procedure :: unpack
+          procedure :: free
+       end type
+!==========
 !       integer, parameter ::  GRIDX=3, GRIDY=6
 !       integer, parameter ::  GRIDX=100, GRIDY=100
 !       integer, parameter ::  GRIDX=1024, GRIDY=1024
-       integer, parameter ::  GRIDX=2048, GRIDY=2048
+!       integer, parameter ::  GRIDX=2048, GRIDY=2048
 !       integer, parameter ::  GRIDX=8192, GRIDY=8192
-!       integer, parameter ::  GRIDX=8192, GRIDY=4096
+       integer, parameter ::  GRIDX=8192, GRIDY=4096
 !       integer, parameter ::  GRIDX=16384, GRIDY=16384
 !       integer, parameter ::  GRIDX=16384, GRIDY=8192
 !       integer, parameter ::  GRIDX=8192, GRIDY=16384
@@ -141,9 +154,8 @@
           !---- Retrieve own-edge data from the GPU:
           !$aeg-omp target update from(Tp(1:local_nx,1:1))
           !$aeg-omp target update from(Tp(1:local_nx,local_ny:local_ny))
-          !$acc update self(Tp(1:local_nx,1:1))
+          !$aeg-acc update self(Tp(1:local_nx,1:1))
           !$aeg-acc update self(Tp(1:local_nx,local_ny:local_ny))
-          !print *,'iteration=',iteration,'ownEdgeLeft=',Tp(1:local_nx,1:1)
 
           !---- send own-left-edge into the neigh-left-right-halo region
           !   - and receive from neigh-left-right-edge into own-left-halo region
@@ -283,8 +295,7 @@
 ! ------ interior of the array
        do j=0,hny+1
           do i=0,hnx+1
-             !T(i,j)=0.0
-             T(i,j)=i+j
+             T(i,j)=0.0
           end do
        end do
 
@@ -379,6 +390,77 @@
           end do
        end do
        end subroutine init_0
+! ==============================================
+! =============== SUBROUTINE allocateBuffers
+       subroutine allocateBuffers(this,leni)
+          implicit none
+          class(interface) :: this
+          integer,intent(in) :: leni
+          double precision,dimension(:,:),pointer,contiguous :: buffer
+
+          this%bufferLength = leni
+          allocate(this%swap_in(this%bufferLength,1))
+          buffer => this%swap_in
+          !$acc enter data create(buffer)
+          allocate(this%swap_out(this%bufferLength,1))
+          buffer=>this%swap_out
+          !$acc enter data create(buffer)
+       end subroutine allocateBuffers
+! ==============================================
+! =============== SUBROUTINE pack
+       subroutine pack(this,arr,leni,ixini,ixfin,jyini,jyfin)
+          use iso_c_binding
+          implicit none
+          class(interface) :: this
+          integer, intent(in) :: leni,ixini,ixfin,jyini,jyfin
+          double precision,intent(in) :: arr(ixini:ixfin,jyini:jyfin)
+          double precision,pointer,contiguous :: buffer(:)
+          integer :: k
+          buffer => this%swap_out(:,1)
+          k=1
+          !$acc data present(buffer,arr) 
+          !$acc host_data use_device(buffer,arr)
+          do j=jyini,jyfin
+             do i=ixini,ixfin
+                buffer(k)=arr(i,j)
+                k=k+1
+             end do
+          end do
+          !$acc end host_data
+          !$acc end data
+      end subroutine pack
+! ==============================================
+! =============== SUBROUTINE unpack
+       subroutine unpack(this,arr,leni,ixini,ixfin,jyini,jyfin)
+          use iso_c_binding
+          implicit none
+          class(interface) :: this
+          integer, intent(in) :: leni,ixini,ixfin,jyini,jyfin
+          double precision,intent(out) :: arr(ixini:ixfin,jyini:jyfin)
+          double precision,pointer,contiguous :: buffer(:)
+          integer :: k
+          buffer => this%swap_out(:,1)
+          k=1
+          !$acc data present(buffer,arr) 
+          !$acc host_data use_device(buffer,arr)
+          do j=jyini,jyfin
+             do i=ixini,ixfin
+                arr(i,j)=buffer(k)
+                k=k+1
+             end do
+          end do
+          !$acc end host_data
+          !$acc end data
+      end subroutine unpack
+! =============== SUBROUTINE free
+       subroutine free(this)
+          implicit none
+          class(interface) :: this
+          !$acc exit data delete(this%swap_out)            
+          !$acc exit data delete(this%swap_in)  
+          deallocate(this%swap_out)
+          deallocate(this%swap_in)
+       end subroutine free
 ! ==============================================
       end program laplace
 ! ======================================================

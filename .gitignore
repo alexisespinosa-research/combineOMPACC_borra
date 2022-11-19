@@ -8,6 +8,7 @@
 *.swo
 *.lst
 core*
+borra*
 *.DS_Store
 results.copy_stats.csv
 results.csv

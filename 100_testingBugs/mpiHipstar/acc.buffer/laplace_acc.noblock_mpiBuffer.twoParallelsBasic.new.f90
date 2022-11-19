@@ -5,12 +5,25 @@
        use iso_c_binding
 
        implicit none
+!========= Swap interface as in HiPSTAR
+       type interface
+          double precision,pointer,contiguous :: swap_out(:,:), swap_in(:,:)
+          integer :: bufferLength
+       contains
+          procedure :: allocateBuffers
+          procedure :: pack
+!          procedure :: send
+!          procedure :: recv
+          procedure :: unpack
+          procedure :: free
+       end type
+!==========
 !       integer, parameter ::  GRIDX=3, GRIDY=6
 !       integer, parameter ::  GRIDX=100, GRIDY=100
 !       integer, parameter ::  GRIDX=1024, GRIDY=1024
-       integer, parameter ::  GRIDX=2048, GRIDY=2048
+!       integer, parameter ::  GRIDX=2048, GRIDY=2048
 !       integer, parameter ::  GRIDX=8192, GRIDY=8192
-!       integer, parameter ::  GRIDX=8192, GRIDY=4096
+       integer, parameter ::  GRIDX=8192, GRIDY=4096
 !       integer, parameter ::  GRIDX=16384, GRIDY=16384
 !       integer, parameter ::  GRIDX=16384, GRIDY=8192
 !       integer, parameter ::  GRIDX=8192, GRIDY=16384
@@ -21,6 +34,7 @@
        double precision, allocatable, target ::  T_new(:,:)
        double precision, pointer ::  Tp(:,:)
        double precision, pointer ::  Tp_new(:,:)
+       type(interface) :: swaperLeft,swaperRight
        integer i,j
        integer max_iterations
        integer :: iteration=1 
@@ -96,6 +110,14 @@
        call init_fixedIndexVal(Tp,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
        !print *,Tp
 
+! --------- Preparing the swap interface
+       !call swaperLeft%allocateBuffers(local_nx)
+       !call swaperRight%allocateBuffers(local_nx)
+       bufferInLeft=>swaperLeft%swap_in(:,1)
+       bufferOutLeft=>swaperLeft%swap_out(:,1)
+       bufferInRight=>swaperRight%swap_in(:,1)
+       bufferOutRight=>swaperRight%swap_out(:,1)
+
 ! --------- Simulation Iterations
        start_time=MPI_Wtime()
        requests=MPI_REQUEST_NULL
@@ -138,25 +160,33 @@
           !$aeg-omp end distribute parallel do
           !$aeg-omp end target teams
 
-          !---- Retrieve own-edge data from the GPU:
+          !---- Retrieve own-edge data from the GPU to the host:
           !$aeg-omp target update from(Tp(1:local_nx,1:1))
           !$aeg-omp target update from(Tp(1:local_nx,local_ny:local_ny))
-          !$acc update self(Tp(1:local_nx,1:1))
+          !$aeg-acc update self(Tp(1:local_nx,1:1))
           !$aeg-acc update self(Tp(1:local_nx,local_ny:local_ny))
-          !print *,'iteration=',iteration,'ownEdgeLeft=',Tp(1:local_nx,1:1)
 
-          !---- send own-left-edge into the neigh-left-right-halo region
-          !   - and receive from neigh-left-right-edge into own-left-halo region
+          !---- Packing own-edge data inside the GPU:
+          !swaperLeft%pack(T,local_nx,1,local_nx,1,1)
+          !swaperRight%pack(T,local_nx,1,local_nx,local_ny,local_ny)
+
+          !---- send own-leftEdge into the neighLeft-rightHalo region
+          !   - and receive from neighLeft-rightEdge into own-leftHalo region
           if (myrank.gt.0) then
              !$aeg-omp target data use_device_ptr(Tp)
-             !$acc host_data use_device(Tp)
+             !$aeg-acc host_data use_device(Tp)
+             !$acc data present (bufferLeftOut,bufferLefttIn)
+             !$acc host_data use_device(bufferLeftOut,bufferLeftIn)
              !print *,'Start to deal with left'
-             call mpi_isend(Tp(1,1),local_nx, MPI_DOUBLE,&
+             !aeg-call mpi_isend(Tp(1,1),local_nx, MPI_DOUBLE,&
+             call mpi_isend(bufferLeftOut,local_nx, MPI_DOUBLE,&
                            myrank-1,0,MPI_COMM_WORLD,requests(1),ierr)
-             call mpi_irecv(Tp(1,0),local_nx, MPI_DOUBLE,&
+             !aeg-call mpi_irecv(Tp(1,0),local_nx, MPI_DOUBLE,&
+             call mpi_irecv(bufferLeftIn,local_nx, MPI_DOUBLE,&
                            myrank-1,0,MPI_COMM_WORLD,requests(2),ierr)
              !print *,'End to deal with left'
              !$acc end host_data
+             !$acc end data
              !$aeg-omp end target data
           end if
 
@@ -164,14 +194,19 @@
           !   - and receive data neigh-right-left-edge into own-right-halo region
           if (myrank.lt.csize-1) then
              !$aeg-omp target data use_device_ptr(Tp)
-             !$acc host_data use_device(Tp)
+             !$aeg-acc host_data use_device(Tp)
+             !$acc data present (bufferRightOut,bufferRightIn)
+             !$acc host_data use_device(bufferRightOut,bufferRightIn)
              !print *,'Start to deal with right'
-             call mpi_isend(Tp(1,local_ny),local_nx, MPI_DOUBLE,& 
+             !aeg-call mpi_isend(Tp(1,local_ny),local_nx, MPI_DOUBLE,& 
+             call mpi_isend(bufferRightOut,local_nx, MPI_DOUBLE,& 
                            myrank+1,0,MPI_COMM_WORLD,requests(3),ierr)
-             call mpi_irecv(Tp(1,local_ny+1),local_nx, MPI_DOUBLE,&
+             !aeg-call mpi_irecv(Tp(1,local_ny+1),local_nx, MPI_DOUBLE,&
+             call mpi_irecv(bufferRightIn,local_nx, MPI_DOUBLE,&
                            myrank+1,0,MPI_COMM_WORLD,requests(4),ierr)
              !print *,'End to deal with right'
              !$acc end host_data
+             !$acc end data
              !$aeg-omp end target data
           end if
 
@@ -185,6 +220,10 @@
           !$aeg-omp target update to(Tp(1:local_nx,local_ny+1:local_ny+1))
           !$aeg-acc update device(Tp(1:local_nx,0:0))
           !$aeg-acc update device(Tp(1:local_nx,local_ny+1:local_ny+1))
+
+          !---- UnPacking own-edge data inside the GPU:
+          !swaperLeft%unpack(T,local_nx,1,local_nx,1,1)
+          !swaperRight%unpack(T,local_nx,1,local_nx,local_ny,local_ny)
 
           !---- reduce the dt value among all MPI ranks
           call mpi_allreduce(dt, dt_world, 1, MPI_DOUBLE,&
@@ -283,8 +322,7 @@
 ! ------ interior of the array
        do j=0,hny+1
           do i=0,hnx+1
-             !T(i,j)=0.0
-             T(i,j)=i+j
+             T(i,j)=0.0
           end do
        end do
 
@@ -379,6 +417,77 @@
           end do
        end do
        end subroutine init_0
+! ==============================================
+! =============== SUBROUTINE allocateBuffers
+       subroutine allocateBuffers(this,leni)
+          implicit none
+          class(interface) :: this
+          integer,intent(in) :: leni
+          double precision,dimension(:,:),pointer,contiguous :: buffer
+
+          this%bufferLength = leni
+          allocate(this%swap_in(this%bufferLength,1))
+          buffer => this%swap_in
+          !$acc enter data create(buffer)
+          allocate(this%swap_out(this%bufferLength,1))
+          buffer=>this%swap_out
+          !$acc enter data create(buffer)
+       end subroutine allocateBuffers
+! ==============================================
+! =============== SUBROUTINE pack
+       subroutine pack(this,arr,leni,ixini,ixfin,jyini,jyfin)
+          use iso_c_binding
+          implicit none
+          class(interface) :: this
+          integer, intent(in) :: leni,ixini,ixfin,jyini,jyfin
+          double precision,intent(in) :: arr(ixini:ixfin,jyini:jyfin)
+          double precision,pointer,contiguous :: buffer(:)
+          integer :: k
+          buffer => this%swap_out(:,1)
+          k=1
+          !$acc data present(buffer,arr) 
+          !$acc host_data use_device(buffer,arr)
+          do j=jyini,jyfin
+             do i=ixini,ixfin
+                buffer(k)=arr(i,j)
+                k=k+1
+             end do
+          end do
+          !$acc end host_data
+          !$acc end data
+       end subroutine pack
+! ==============================================
+! =============== SUBROUTINE unpack
+       subroutine unpack(this,arr,leni,ixini,ixfin,jyini,jyfin)
+          use iso_c_binding
+          implicit none
+          class(interface) :: this
+          integer, intent(in) :: leni,ixini,ixfin,jyini,jyfin
+          double precision,intent(out) :: arr(ixini:ixfin,jyini:jyfin)
+          double precision,pointer,contiguous :: buffer(:)
+          integer :: k
+          buffer => this%swap_in(:,1)
+          k=1
+          !$acc data present(buffer,arr) 
+          !$acc host_data use_device(buffer,arr)
+          do j=jyini,jyfin
+             do i=ixini,ixfin
+                arr(i,j)=buffer(k)
+                k=k+1
+             end do
+          end do
+          !$acc end host_data
+          !$acc end data
+       end subroutine unpack
+! =============== SUBROUTINE free
+       subroutine free(this)
+          implicit none
+          class(interface) :: this
+          !$acc exit data delete(this%swap_out)            
+          !$acc exit data delete(this%swap_in)  
+          deallocate(this%swap_out)
+          deallocate(this%swap_in)
+       end subroutine free
 ! ==============================================
       end program laplace
 ! ======================================================

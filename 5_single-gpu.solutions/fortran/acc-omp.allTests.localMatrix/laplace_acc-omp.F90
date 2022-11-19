@@ -43,6 +43,9 @@
 !---------- Initialising arrays in the host
        !call init_linear128(T)
        call init_fixedIndexVal(T)
+       !call init_jIndex(T)
+       !call init_jIndexPow(T)
+       !print *,'Tini=',T
 
 !---------- Preloading arrays into the GPU. Default is to use OpenACC,
 !           both as function and internal
@@ -206,6 +209,7 @@
 #      endif
 
 !---- Do we have T in the host ready to be saved?
+      !print *,'Tfin=',T
       print "(a,i4.0,a,f15.10,a,f15.10)",'Final values, iteration ',&
             iteration,', dt ',dt,', T[GXB-CO][GYB-CO]=',&
             T(GRIDX+2-CORNEROFFSET,GRIDY+2-CORNEROFFSET)

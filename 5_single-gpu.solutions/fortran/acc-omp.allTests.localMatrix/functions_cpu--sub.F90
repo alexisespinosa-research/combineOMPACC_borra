@@ -50,5 +50,49 @@
             end do
          end procedure init_fixedIndexVal
 ! ----------------------------------
+! ----------------------------------
+         module procedure init_iIndex
+         integer i,j
+!           initilising:
+            do j=1,GRIDY+2
+               do i=1,GRIDX+2
+                  U(i,j)=dble(i-1)
+               end do
+            end do
+         end procedure init_iIndex
+! ----------------------------------
+! ----------------------------------
+         module procedure init_jIndex
+         integer i,j
+!           initilising:
+            do j=1,GRIDY+2
+               do i=1,GRIDX+2
+                  U(i,j)=dble(j-1)
+               end do
+            end do
+         end procedure init_jIndex
+! ----------------------------------
+! ----------------------------------
+         module procedure init_iIndexPow
+         integer i,j
+!           initilising:
+            do j=1,GRIDY+2
+               do i=1,GRIDX+2
+                  U(i,j)=(dble(i-1))**2
+               end do
+            end do
+         end procedure init_iIndexPow
+! ----------------------------------
+! ----------------------------------
+         module procedure init_jIndexPow
+         integer i,j
+!           initilising:
+            do j=1,GRIDY+2
+               do i=1,GRIDX+2
+                  U(i,j)=(dble(j-1))**2
+               end do
+            end do
+         end procedure init_jIndexPow
+! ----------------------------------
 
       end submodule sub

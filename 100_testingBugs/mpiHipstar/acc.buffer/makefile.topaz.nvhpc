@@ -3,15 +3,15 @@
 CLUSTER=topaz
 GPU_ARCH=cc70
 VENDOR=nvhpc
-MPISURNAME=noblock_mpiGPU
+MPISURNAME=noblock_mpiBuffer
 #SURNAME=singleParallelBasic
 SURNAME=twoParallelsBasic
 
 # --------------------
 CC=mpicc
 F90=mpifort
-CFLAGS=-O3 -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
-FFLAGS=-O3 -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
+CFLAGS=-O3 -cpp -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
+FFLAGS=-O3 -cpp -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
 LIBS=
 COMPILER_TAG=-D_NVHPC_
 OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o

@@ -9,8 +9,8 @@ SURNAME=twoParallelsBasic
 # --------------------
 CC=mpicc
 F90=mpif90
-CFLAGS=-O3 -fopenacc -cpp 
-FFLAGS=-O3 -fopenacc -cpp
+CFLAGS=-O3 -cpp
+FFLAGS=-O3 -cpp
 LIBS=
 COMPILER_TAG=-D_GNU_
 OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
