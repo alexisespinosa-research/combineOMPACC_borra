@@ -5,7 +5,7 @@
        use iso_c_binding
 
        implicit none
-!       integer, parameter ::  GRIDX=3, GRIDY=6
+!       integer, parameter ::  GRIDX=4, GRIDY=8
 !       integer, parameter ::  GRIDX=100, GRIDY=100
 !       integer, parameter ::  GRIDX=1024, GRIDY=1024
 !       integer, parameter ::  GRIDX=2048, GRIDY=2048
@@ -30,6 +30,7 @@
        integer status(MPI_STATUS_SIZE)
        integer :: local_nx,local_ny,bx,by,bxtot,bytot
        integer :: ixstart,jystart,leftx,lefty
+       integer :: devTotal,devHere
        integer(acc_device_kind) :: hereDeviceType
 
 ! -------- MPI startup
@@ -38,8 +39,11 @@
        call mpi_comm_rank(MPI_COMM_WORLD, myrank, ierr)
 
 ! -------- Choosing device
-       !aeg:call omp_set_default_device(myrank)
-       call acc_set_device_num(myrank,acc_get_device_type()) !acc_device_amd or acc_device_radeon
+       devTotal=acc_get_num_devices(acc_get_device_type())
+       !aeg:devTotal=omp_get_num_devices()
+       devHere=mod(myRank,devTotal)
+       call acc_set_device_num(devHere,acc_get_device_type()) !acc_device_amd or acc_device_radeon
+       !aeg:call omp_set_default_device(devHere)
 
 ! -------- Checking arguments are correct
        if (myrank == 0) then
@@ -72,6 +76,8 @@
           jystart=jystart+(by-1)
        end if
        print *, 'myrank=',myrank,', of total csize=',csize
+       print *, 'myrank=',myrank,', has local device number=',devHere, &
+                ' of total avail devices in node=',devTotal
        print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
        print *, 'myrank=',myrank,',local_ny=',local_ny, &
                 ' of total ny=',ny,' with jystart=',jystart

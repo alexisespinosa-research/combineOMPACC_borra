@@ -28,6 +28,7 @@
        integer status(MPI_STATUS_SIZE)
        integer :: local_nx,local_ny,bx,by,bxtot,bytot
        integer :: ixstart,jystart,leftx,lefty
+       integer :: devTotal,devHere
 
 ! -------- MPI startup
        call mpi_init(ierr)
@@ -35,7 +36,10 @@
        call mpi_comm_rank(MPI_COMM_WORLD, myrank, ierr)
 
 ! -------- Choosing device
-       call omp_set_default_device(myrank)
+       !aeg-devTotal=omp_get_num_devices() !Not working for nvhpc:unknown reason
+       devTotal=2 !hardcoding instead for nvhpc
+       devHere=mod(myRank,devTotal)
+       call omp_set_default_device(devHere)
 
 ! -------- Checking arguments are correct
        if (myrank == 0) then
@@ -68,6 +72,8 @@
           jystart=jystart+(by-1)
        end if
        print *, 'myrank=',myrank,', of total csize=',csize
+       print *, 'myrank=',myrank,', has local device number=',devHere, &
+                ' of total avail devices in node=',devTotal
        print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
        print *, 'myrank=',myrank,',local_ny=',local_ny, &
                 ' of total ny=',ny,' with jystart=',jystart

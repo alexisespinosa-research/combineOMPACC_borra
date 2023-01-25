@@ -1,4 +1,5 @@
-CC=nvcc
+#CC=nvcc
+CC=nvc
 CFLAGS=-O3 -acc -Minfo=accel
 LIBS=
 SURNAME=twoKernelsBasic

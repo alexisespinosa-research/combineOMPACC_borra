@@ -3,7 +3,8 @@
 CLUSTER=topaz
 GPU_ARCH=cc70
 VENDOR=nvhpc
-MPISURNAME=noblock_mpiGPU
+#MPISURNAME=noblock_mpiGPU
+MPISURNAME=noblock_mpiHOST
 #SURNAME=singleParallelBasic
 SURNAME=twoParallelsBasic
 

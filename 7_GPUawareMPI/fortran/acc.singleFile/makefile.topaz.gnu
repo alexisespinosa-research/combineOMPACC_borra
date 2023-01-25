@@ -2,8 +2,8 @@
 # reset this from the command line for easier making of other test code:
 CLUSTER=topaz
 VENDOR=gnu
-#MPISURNAME=noblock_mpiHOST
-MPISURNAME=noblock_mpiGPU
+MPISURNAME=noblock_mpiHOST
+#MPISURNAME=noblock_mpiGPU
 #SURNAME=singleParallelBasic
 SURNAME=twoParallelsBasic
 
