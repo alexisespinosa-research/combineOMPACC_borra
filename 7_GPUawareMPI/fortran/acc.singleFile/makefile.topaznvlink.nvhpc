@@ -1,10 +1,11 @@
 # --------------------
 # reset this from the command line for easier making of other test code:
-CLUSTER=topaz
-GPU_ARCH=cc70
+CLUSTER=topazNvlink
+#GPU_ARCH=cc70
+GPU_ARCH=cc60
 VENDOR=nvhpc
-MPISURNAME=noblock_mpiGPU
-#MPISURNAME=noblock_mpiHOST
+#MPISURNAME=noblock_mpiGPU
+MPISURNAME=noblock_mpiHOST
 #SURNAME=singleParallelBasic
 SURNAME=twoParallelsBasic
 

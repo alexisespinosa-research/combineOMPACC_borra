@@ -20,3 +20,4 @@ results.stats.csv
 results.sysinfo.txt
 a.out
 slurm*.out
+*.out

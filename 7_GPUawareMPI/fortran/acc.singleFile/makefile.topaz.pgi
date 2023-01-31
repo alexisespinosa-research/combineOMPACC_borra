@@ -2,7 +2,7 @@
 # reset this from the command line for easier making of other test code:
 CLUSTER=topaz
 GPU_ARCH=cc70
-VENDOR=nvhpc
+VENDOR=pgi
 MPISURNAME=noblock_mpiGPU
 #MPISURNAME=noblock_mpiHOST
 #SURNAME=singleParallelBasic
@@ -11,10 +11,10 @@ SURNAME=twoParallelsBasic
 # --------------------
 CC=mpicc
 F90=mpifort
-CFLAGS=-O3 -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
-FFLAGS=-O3 -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
+CFLAGS=-O3 -acc -Minfo=accel,acc -Mcuda=$(GPU_ARCH)
+FFLAGS=-O3 -acc -Minfo=accel,acc -Mcuda=$(GPU_ARCH)
 LIBS=
-COMPILER_TAG=-D_NVHPC_
+COMPILER_TAG=-D_PGI_
 OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
 TARGET=laplace_acc.$(MPISURNAME).$(SURNAME).exe
 

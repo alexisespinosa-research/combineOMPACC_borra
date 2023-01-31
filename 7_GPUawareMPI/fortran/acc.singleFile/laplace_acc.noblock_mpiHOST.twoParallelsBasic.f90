@@ -75,12 +75,12 @@
        else
           jystart=jystart+(by-1)
        end if
-       print *, 'myrank=',myrank,', of total csize=',csize
+!       print *, 'myrank=',myrank,', of total csize=',csize
        print *, 'myrank=',myrank,', has local device number=',devHere, &
                 ' of total avail devices in node=',devTotal
-       print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
-       print *, 'myrank=',myrank,',local_ny=',local_ny, &
-                ' of total ny=',ny,' with jystart=',jystart
+!       print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
+!       print *, 'myrank=',myrank,',local_ny=',local_ny, &
+!                ' of total ny=',ny,' with jystart=',jystart
 
 
 !      -- X direction
