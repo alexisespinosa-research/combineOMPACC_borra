@@ -1,0 +1,33 @@
+# --------------------
+# reset this from the command line for easier making of other test code:
+CLUSTER=mulan
+VENDOR=cray
+MPISURNAME=noblock_mpiBuffer
+#SURNAME=singleParallelBasic
+SURNAME=twoParallelsBasic
+
+# --------------------
+CC=cc
+F90=ftn
+CFLAGS=-O3 -fopenacc -rm -eZ
+FFLAGS=-O3 -hacc -rm -eZ
+LIBS=
+COMPILER_TAG=-D_CRAY_
+OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
+TARGET=laplace_acc.$(MPISURNAME).$(SURNAME).exe
+
+%.o: %.f90
+	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
+
+$(TARGET): $(OBJ)
+	$(F90) $(FFLAGS) $(LIBS) -o $@ $^
+	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
+
+cleanAll:
+	rm -f *.exe *.o *.s *.lst *.i
+
+cleanThis:
+	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+
+leaveThis:
+	rm -f $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
