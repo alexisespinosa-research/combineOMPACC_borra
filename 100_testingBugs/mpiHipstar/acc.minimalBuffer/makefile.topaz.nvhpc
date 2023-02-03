@@ -3,19 +3,16 @@
 CLUSTER=topaz
 GPU_ARCH=cc70
 VENDOR=nvhpc
-MPISURNAME=noblock_mpiBuffer
-#SURNAME=singleParallelBasic
-SURNAME=twoParallelsBasic
 
 # --------------------
-CC=mpicc
-F90=mpifort
+CC=nvcc
+F90=nvfortran
 CFLAGS=-O3 -cpp -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
 FFLAGS=-O3 -cpp -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
 LIBS=
 COMPILER_TAG=-D_NVHPC_
-OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
-TARGET=laplace_acc.$(MPISURNAME).$(SURNAME).exe
+OBJ=testing_acc_swapBuffer.o
+TARGET=testing_acc_swapBuffer.exe
 
 %.o: %.f90
 	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
@@ -25,10 +22,10 @@ $(TARGET): $(OBJ)
 	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
 
 cleanAll:
-	rm -f *.exe *.o *.s *.lst
+	rm -f *.exe *.o *.s *.lst *.mod *.i
 
 cleanThis:
-	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s *$(SURNAME)*.i
 
 leaveThis:
-	rm -f $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+	rm -f $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s *$(SURNAME)*.i

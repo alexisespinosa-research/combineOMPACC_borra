@@ -1,8 +1,9 @@
 !+++++++++++++++++++++++++++++++++++++++++++++++
+! MODULE: INTERFACES
 !+++++++++++++++++++++++++++++++++++++++++++++++
       module interfaces
        implicit none
-!========= Swap interface as in HiPSTAR
+!=========  TYPE: INTERFACE as the "swap interface" in HiPSTAR
        type interface
           double precision,pointer,contiguous :: swap_1(:), swap_2(:)
           double precision,pointer,contiguous :: swap_3(:), swap_4(:)
@@ -13,7 +14,7 @@
           procedure :: free
        end type
      contains
-! =============== SUBROUTINE allocateBuffers
+! =============== suroutine: allocateBuffers
       subroutine allocateBuffers(this,leni)
          implicit none
          class(interface) :: this
@@ -30,35 +31,43 @@
          allocate(this%swap_4(this%bufferLength))
          allocate(this%swap_5(this%bufferLength))
 
-         !--- 1: Initialising the array in the host works
+         !--- 1: Plain pointing + "data create" here + Initialising the array first in the host
+         !    Works for: all compilers
          !    even if values are not moved to the gpu (using create)
          buffer_1 => this%swap_1
          buffer_1=0.0
          !$acc enter data create(buffer_1)
 
-         !--- 2: Initialising array index limits works
+         !--- 2: Indicating array index limits when pointing + "data create" here
+         !    Works for: all compilers
          buffer_2 => this%swap_2(:)
-         !This one also works:buffer_2(1:) => this%swap_2(1:)
          !$acc enter data create(buffer_2)
-         !-$-:This one also works:$acc enter data create(buffer_2(:))
-         !-$-:This one also works:$acc enter data create(buffer_2(1:))
+         !---:These other pointings also work:
+         !---:     buffer_2(1:) => this%swap_2(1:)
+         !---:These other data create also work:
+         !---:     $acc enter data create(buffer_2(:))
+         !---:     $acc enter data create(buffer_2(1:))
 
-         !--- 3: "copyin" instead of "create" works
+         !--- 3: Plain pointing + "data copyin" here instead of "data create"
+         !    Works for: all compilers
          buffer_3 => this%swap_3
          !$acc enter data copyin(buffer_3)
 
-         !--- 4: Plain pointing only works if there is a "create"
-         !       in the calling function
+         !--- 4: Plain pointing + "data create" here 
+         !       + additional "data create" in the calling function (check the call)
+         !    Works for: all compilers
          buffer_4 => this%swap_4
          !$acc enter data create(buffer_4)
 
-         !--- 5: Plain pointing does not work
+         !--- 5: Plain pointing + "data create" here
+         !    Works for: nvhpc
+         !    NOT working for: cray compiler
          buffer_5 => this%swap_5
          !$acc enter data create(buffer_5)
       end subroutine allocateBuffers
 ! ==============================================
 
-! =============== SUBROUTINE free
+! =============== subroutine: free
       subroutine free(this)
          implicit none
          class(interface) :: this
@@ -86,11 +95,13 @@
 
       end module interfaces
 !+++++++++++++++++++++++++++++++++++++++++++++++
+! END MODULE
 !+++++++++++++++++++++++++++++++++++++++++++++++
 
 !+++++++++++++++++++++++++++++++++++++++++++++++
+! PROGRAM: TESTING
 !+++++++++++++++++++++++++++++++++++++++++++++++
-       program laplace
+       program testing
 #if defined (_OPENACC)
        use openacc
 #endif
@@ -114,8 +125,10 @@
        local_ny=ny
        local_nx=nx
 
-! --------- Allocating arrays inside swaper and creating host-pointers
+! --------- Allocating swaper-arrays using swaper-functions
        call swaper%allocateBuffers(local_nx)
+
+! --------- Using host-"M"-pointers to point towards swaper-arrays
        bufferM_1=>swaper%swap_1
        bufferM_2=>swaper%swap_2
        bufferM_3=>swaper%swap_3
@@ -123,29 +136,49 @@
        bufferM_5=>swaper%swap_5
 
 !===================== 
-! Accessing arrays allocated in the GPU
-!(Comment failed tests if you want the code to move forward)
+! Accessing arrays allocated in the GPU by the swaper-functions
+!(Comment tests that are failng if you want the code to move forward)
        write(*,*) 'Testing access to the arrays on the GPU' 
 ! --------- Testing aproach 1
+       print *,'initial bufferM_1=',bufferM_1
+       !$acc serial present(bufferM_1)
+           bufferM_1(:)=1.0
+       !$acc end serial
        !$acc update host(bufferM_1)
-       print *,'bufferM_1=',bufferM_1
+       print *,'final bufferM_1=',bufferM_1
 
 ! --------- Testing aproach 2
+       print *,'initial bufferM_2=',bufferM_2
+       !$acc serial present(bufferM_2)
+           bufferM_2(:)=2.0
+       !$acc end serial
        !$acc update host(bufferM_2)
-       print *,'bufferM_2=',bufferM_2
+       print *,'final bufferM_2=',bufferM_2
 
 ! --------- Testing aproach 3
+       print *,'initial bufferM_3=',bufferM_3
+       !$acc serial present(bufferM_3)
+           bufferM_3(:)=3.0
+       !$acc end serial
        !$acc update host(bufferM_3)
-       print *,'bufferM_3=',bufferM_3
+       print *,'final bufferM_3=',bufferM_3
 
 ! --------- Testing aproach 4
+       print *,'initial bufferM_4=',bufferM_4
        !$acc enter data create(bufferM_4)
+       !$acc serial present(bufferM_4)
+           bufferM_4(:)=4.0
+       !$acc end serial
        !$acc update host(bufferM_4)
-       print *,'bufferM_4=',bufferM_4
+       print *,'final bufferM_4=',bufferM_4
 
 ! --------- Testing aproach 5
+       print *,'initial bufferM_5=',bufferM_5
+       !$acc serial present(bufferM_5)
+           bufferM_5(:)=5.0
+       !$acc end serial
        !$acc update host(bufferM_5)
-       print *,'bufferM_5=',bufferM_5
+       print *,'final bufferM_5=',bufferM_5
 
 !===================== 
 ! Free-ing of memory may fail in exactly the same "faulty" pointers
@@ -156,8 +189,9 @@
 
 !===================== 
        write(*,*) 'Done'
-      end program laplace
+      end program testing
 !+++++++++++++++++++++++++++++++++++++++++++++++
+! END PROGRAM
 !+++++++++++++++++++++++++++++++++++++++++++++++
 
 
