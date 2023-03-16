@@ -2,9 +2,9 @@
 # reset this from the command line for easier making of other test code:
 CLUSTER=topaz
 VENDOR=gnu
-MPISURNAME=noblock_mpiBuffer
-#SURNAME=singleParallelBasic
-SURNAME=twoParallelsBasic
+MPISURNAME=
+SURNAME=swapBuffer
+PRENAME=testing
 
 # --------------------
 CC=mpicc
@@ -13,8 +13,8 @@ CFLAGS=-O3 -fopenacc -cpp
 FFLAGS=-O3 -fopenacc -cpp
 LIBS=
 COMPILER_TAG=-D_GNU_
-OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
-TARGET=laplace_acc.$(MPISURNAME).$(SURNAME).exe
+OBJ=$(PRENAME)_acc.$(SURNAME).o
+TARGET=$(PRENAME)_acc.$(SURNAME).exe
 
 %.o: %.f90
 	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<

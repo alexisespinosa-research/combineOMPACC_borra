@@ -30,6 +30,7 @@
          allocate(this%swap_3(this%bufferLength))
          allocate(this%swap_4(this%bufferLength))
          allocate(this%swap_5(this%bufferLength))
+         allocate(this%swap_6(this%bufferLength))
 
          !--- 1: Plain pointing + "data create" here + Initialising the array first in the host
          !    Works for: all compilers
@@ -59,11 +60,19 @@
          buffer_4 => this%swap_4
          !$acc enter data create(buffer_4)
 
-         !--- 5: Plain pointing + "data create" here
-         !    Works for: nvhpc
-         !    NOT working for: cray compiler
+         !--- 5: Plain pointing + "data create" here + data use in the GPU here
+         !    Works for: all compilers
          buffer_5 => this%swap_5
          !$acc enter data create(buffer_5)
+         !$acc serial present(buffer_5)
+             buffer_5(:)=0.0
+         !$acc end serial
+
+         !--- 6: Plain pointing + "data create" here
+         !    Works for: nvhpc
+         !    NOT working for: cray compiler
+         buffer_6 => this%swap_6
+         !$acc enter data create(buffer_6)
       end subroutine allocateBuffers
 ! ==============================================
 
@@ -80,16 +89,19 @@
          buffer_3 => this%swap_3(:)
          buffer_4 => this%swap_4(:)
          buffer_5 => this%swap_5(:)
+         buffer_6 => this%swap_6(:)
          !$acc exit data delete(buffer_1(:))         
          !$acc exit data delete(buffer_2(:))
          !$acc exit data delete(buffer_3(:))         
          !$acc exit data delete(buffer_4(:))
          !$acc exit data delete(buffer_5(:))
+         !$acc exit data delete(buffer_6(:))
          deallocate(this%swap_1)
          deallocate(this%swap_2)
          deallocate(this%swap_3)
          deallocate(this%swap_4)
          deallocate(this%swap_5)
+         deallocate(this%swap_6)
       end subroutine free
 ! ==============================================
 
@@ -105,8 +117,6 @@
 #if defined (_OPENACC)
        use openacc
 #endif
-       !use iso_c_binding, only :: c_ptr, c_loc, c_f_pointer
-       use iso_c_binding
        use interfaces
 
        implicit none
@@ -134,6 +144,7 @@
        bufferM_3=>swaper%swap_3
        bufferM_4=>swaper%swap_4
        bufferM_5=>swaper%swap_5
+       bufferM_6=>swaper%swap_6
 
 !===================== 
 ! Accessing arrays allocated in the GPU by the swaper-functions
@@ -179,6 +190,14 @@
        !$acc end serial
        !$acc update host(bufferM_5)
        print *,'final bufferM_5=',bufferM_5
+
+! --------- Testing aproach 6
+       print *,'initial bufferM_6=',bufferM_6
+       !$acc serial present(bufferM_6)
+           bufferM_6(:)=6.0
+       !$acc end serial
+       !$acc update host(bufferM_6)
+       print *,'final bufferM_6=',bufferM_6
 
 !===================== 
 ! Free-ing of memory may fail in exactly the same "faulty" pointers

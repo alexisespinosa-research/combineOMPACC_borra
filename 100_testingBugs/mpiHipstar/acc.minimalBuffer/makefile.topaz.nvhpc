@@ -3,6 +3,9 @@
 CLUSTER=topaz
 GPU_ARCH=cc70
 VENDOR=nvhpc
+MPISURNAME=
+SURNAME=swapBuffer
+PRENAME=testing
 
 # --------------------
 CC=nvcc
@@ -11,8 +14,8 @@ CFLAGS=-O3 -cpp -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
 FFLAGS=-O3 -cpp -acc -Minfo=accel,acc -gpu=$(GPU_ARCH)
 LIBS=
 COMPILER_TAG=-D_NVHPC_
-OBJ=testing_acc_swapBuffer.o
-TARGET=testing_acc_swapBuffer.exe
+OBJ=$(PRENAME)_acc.$(SURNAME).o
+TARGET=$(PRENAME)_acc.$(SURNAME).exe
 
 %.o: %.f90
 	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
