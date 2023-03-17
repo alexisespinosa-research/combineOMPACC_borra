@@ -10,8 +10,8 @@ SURNAME=twoParallelsBasic
 # --------------------
 CC=cc
 F90=ftn
-CFLAGS=-O3 -fopenacc -rm
-FFLAGS=-O3 -hacc -rm
+CFLAGS=-O3 -fopenacc -rm -cpp
+FFLAGS=-O3 -hacc -rm -eZ
 LIBS=
 COMPILER_TAG=-D_CRAY_
 OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
@@ -25,7 +25,7 @@ $(TARGET): $(OBJ)
 	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
 
 cleanAll:
-	rm -f *.exe *.o *.s *.lst
+	rm -f *.exe *.o *.s *.lst *.mod *.i
 
 cleanThis:
 	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
