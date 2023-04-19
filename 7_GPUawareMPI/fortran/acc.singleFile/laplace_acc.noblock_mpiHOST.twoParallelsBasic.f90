@@ -10,10 +10,11 @@
 !       integer, parameter ::  GRIDX=1024, GRIDY=1024
 !       integer, parameter ::  GRIDX=2048, GRIDY=2048
 !       integer, parameter ::  GRIDX=8192, GRIDY=8192
-       integer, parameter ::  GRIDX=8192, GRIDY=4096
+!       integer, parameter ::  GRIDX=8192, GRIDY=4096
 !       integer, parameter ::  GRIDX=16384, GRIDY=16384
 !       integer, parameter ::  GRIDX=16384, GRIDY=8192
 !       integer, parameter ::  GRIDX=8192, GRIDY=16384
+       integer :: GRIDX, GRIDY
        integer :: nx,ny
        double precision, parameter :: MAX_TEMP_ERROR=0.02
        integer, parameter :: CX=10,CY=10
@@ -47,14 +48,18 @@
 
 ! -------- Checking arguments are correct
        if (myrank == 0) then
-          if (command_argument_count().ne.1) then
+          if (command_argument_count().ne.3) then
             call getarg(0, arg)
-            print *, 'Usage ',trim(arg),' number_of_iterations'
+            print *, 'Usage: ',trim(arg),' <number_of_iterations> <grid_size_in_X> <grid_size_in_Y>'
             stop
           end if
        end if
        call getarg(1,arg)
        read(arg,*)  max_iterations
+       call getarg(2,arg)
+       read(arg,*)  GRIDX
+       call getarg(3,arg)
+       read(arg,*)  GRIDY
        nx = GRIDX
        ny = GRIDY
 
