@@ -37,16 +37,26 @@
          this%bufferLength = leni
 
          allocate(this%swap_in(0:this%bufferLength+1))
-         !aeg-buffer => this%swap_in(:)
-         buffer_in(0:) => this%swap_in(0:)
-         buffer_in=0.0
-         !$acc enter data copyin(buffer_in(0:this%bufferLength+1))
+         !aeg-buffer => this%swap_in
+         !aeg-buffer(0:) => this%swap_in(0:)
+         buffer_in => this%swap_in
+         !aeg-buffer_in(0:) => this%swap_in(0:)
+         !aeg-buffer_in=0.0
+         !$acc enter data create(buffer_in)
+         !$aeg-acc enter data create(buffer_in(0:this%bufferLength+1))
+         !$aeg-acc enter data copyin(buffer_in(0:this%bufferLength+1))
+         !$aeg-acc enter data create(buffer)
+         !$aeg-acc enter data create(buffer(0:this%bufferLength+1))
 
          allocate(this%swap_out(0:this%bufferLength+1))
-         !aeg-buffer=>this%swap_out(:)
-         buffer_out(0:)=>this%swap_out(0:)
-         buffer_out=0.0
-         !$acc enter data copyin(buffer_out(0:this%bufferLength+1))
+         buffer=>this%swap_out
+         !aeg-buffer(0:)=>this%swap_out(0:)
+         !aeg-buffer_out(0:)=>this%swap_out(0:)
+         !aeg-buffer_out=0.0
+         !$aeg-acc enter data copyin(buffer_out(0:this%bufferLength+1))
+         !$aeg-acc enter data create(buffer_out(0:this%bufferLength+1))
+         !$acc enter data create(buffer)
+         !$aeg-acc enter data create(buffer(0:this%bufferLength+1))
 
       end subroutine allocateBuffers
 ! ==============================================
@@ -58,8 +68,8 @@
          double precision,pointer,contiguous :: buffer(:),buffer_in(:),buffer_out(:)
          buffer_in =>this%swap_in(:)
          buffer_out=>this%swap_out(:)
-         !$acc exit data delete(buffer_in(:))            
-         !$acc exit data delete(buffer_out(:))  
+         !$acc exit data delete(buffer_in(:))         
+         !$acc exit data delete(buffer_out(:))
          deallocate(this%swap_out)
          deallocate(this%swap_in)
       end subroutine free
@@ -77,6 +87,7 @@
          buffer(0:) => this%swap_out(0:)
          !print *, 'myrank=',myrank,', Passed in pack buffer pointing'
 
+         !$acc enter data create(buffer)
          !$acc parallel loop present(buffer,arr) collapse(2)
          do j=jyini,jyfin
             do i=ixini,ixfin
@@ -99,6 +110,8 @@
          integer :: i,j,k
          buffer(0:) => this%swap_in(0:)
          !print *, 'myrank=',myrank,', Passed in unpack buffer pointing'
+
+         !$acc enter data create(buffer)
          !$acc parallel loop present(buffer,arr) collapse(2)
          do j=jyini,jyfin
             do i=ixini,ixfin
@@ -235,7 +248,7 @@
        bufferInRight(0:)=>swaperRight%swap_in(0:)
        bufferOutRight(0:)=>swaperRight%swap_out(0:)
        print *, 'myrank=',myrank,', Passed buffer pointing'
-       !$acc update self(bufferOutLeft,bufferInLeft,bufferOutRight,bufferInRight)
+       !$aeg-acc update self(bufferOutLeft,bufferInLeft,bufferOutRight,bufferInRight)
        !aeg-print *,'bufferOutLeft=',bufferOutLeft
        !aeg-print *,'bufferInLeft=',bufferInLeft
        !aeg-print *,'bufferOutRight=',bufferOutRight
@@ -311,7 +324,9 @@
           if (myrank.gt.0) then
              !$aeg-omp target data use_device_ptr(Tp)
              !$aeg-acc host_data use_device(Tp)
-             !$acc data present (bufferOutLeft,bufferInLeft)
+             !$aeg-acc data present (bufferOutLeft,bufferInLeft)
+
+             !$acc enter data create(bufferOutLeft,bufferInLeft)
              !$acc host_data use_device(bufferOutLeft,bufferInLeft)
              !print *,'Start to deal with left'
              !aeg-call mpi_isend(Tp(1,1),local_nx, MPI_DOUBLE,&
@@ -322,7 +337,7 @@
                            myrank-1,0,MPI_COMM_WORLD,requests(2),ierr)
              !print *,'End to deal with left'
              !$acc end host_data
-             !$acc end data
+             !$aeg-acc end data
              !$aeg-omp end target data
           end if
 
@@ -331,7 +346,9 @@
           if (myrank.lt.csize-1) then
              !$aeg-omp target data use_device_ptr(Tp)
              !$aeg-acc host_data use_device(Tp)
-             !$acc data present (bufferOutRight,bufferInRight)
+             !$aeg-acc data present (bufferOutRight,bufferInRight)
+
+             !$acc enter data create(bufferOutRight,bufferInRight)
              !$acc host_data use_device(bufferOutRight,bufferInRight)
              !print *,'Start to deal with right'
              !aeg-call mpi_isend(Tp(1,local_ny),local_nx, MPI_DOUBLE,& 
@@ -342,7 +359,7 @@
                            myrank+1,0,MPI_COMM_WORLD,requests(4),ierr)
              !print *,'End to deal with right'
              !$acc end host_data
-             !$acc end data
+             !$aeg-acc end data
              !$aeg-omp end target data
           end if
 

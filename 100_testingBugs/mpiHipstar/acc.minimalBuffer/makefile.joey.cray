@@ -2,10 +2,9 @@
 # reset this from the command line for easier making of other test code:
 CLUSTER=joey
 VENDOR=cray
-#MPISURNAME=noblock_mpiHOST
-MPISURNAME=noblock_mpiGPU
-#SURNAME=singleParallelBasic
-SURNAME=twoParallelsBasic
+MPISURNAME=
+SURNAME=swapBuffer
+PRENAME=testing
 
 # --------------------
 CC=cc
@@ -14,8 +13,8 @@ CFLAGS=-O3 -fopenacc -rm -cpp
 FFLAGS=-O3 -hacc -rm -eZ
 LIBS=
 COMPILER_TAG=-D_CRAY_
-OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
-TARGET=laplace_acc.$(MPISURNAME).$(SURNAME).exe
+OBJ=$(PRENAME)_acc.$(SURNAME).o
+TARGET=$(PRENAME)_acc.$(SURNAME).exe
 
 %.o: %.f90
 	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
@@ -28,7 +27,7 @@ cleanAll:
 	rm -f *.exe *.o *.s *.lst *.mod *.i
 
 cleanThis:
-	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s *$(SURNAME)*.i
 
 leaveThis:
-	rm -f $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+	rm -f $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s *$(SURNAME)*.i

@@ -1,6 +1,6 @@
 # --------------------
 # reset this from the command line for easier making of other test code:
-CLUSTER=joey
+CLUSTER=crusher
 VENDOR=cray
 #MPISURNAME=noblock_mpiHOST
 MPISURNAME=noblock_mpiGPU
