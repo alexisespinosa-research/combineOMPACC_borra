@@ -24,15 +24,16 @@
        integer max_iterations
        integer :: iteration=1 
        double precision :: dt=0.0,dt_world=100
-       character(len=32) :: arg
+       character(len=256) :: arg
        double precision :: start_time,stop_time
-       real elapsed_time
+       real :: elapsed_time
        integer :: ierr, csize, myrank, requests(4)
        integer status(MPI_STATUS_SIZE)
        integer :: local_nx,local_ny,bx,by,bxtot,bytot
        integer :: ixstart,jystart,leftx,lefty
        integer :: devTotal,devHere
        integer(acc_device_kind) :: hereDeviceType
+       integer :: checkInput
 
 ! -------- MPI startup
        call mpi_init(ierr)
@@ -46,14 +47,21 @@
        call acc_set_device_num(devHere,acc_get_device_type()) !acc_device_amd or acc_device_radeon
        !aeg:call omp_set_default_device(devHere)
 
-! -------- Checking arguments are correct
+! -------- Checking input arguments are correct
+       checkInput=0
        if (myrank == 0) then
           if (command_argument_count().ne.3) then
             call getarg(0, arg)
             print *, 'Usage: ',trim(arg),' <number_of_iterations> <grid_size_in_X> <grid_size_in_Y>'
-            stop
+            checkInput=-1
           end if
        end if
+       call mpi_bcast(checkInput, 1, MPI_INT, 0, MPI_COMM_WORLD,ierr);
+       if (checkInput /= 0) then
+          call mpi_finalize(ierr)
+          stop
+       end if
+
        call getarg(1,arg)
        read(arg,*)  max_iterations
        call getarg(2,arg)
@@ -196,7 +204,7 @@
           !periodically print largest change
           if (mod(iteration,100).eq.0) then
           !if (mod(iteration,1).eq.0) then
-             print "(a,i4,2(a,f15.10),2(a,i2),(a,f15.10))",&
+             print "(a,i4,2(a,f15.10),2(a,i2),(a,f25.10))",&
              'Iteration ',iteration,', dt ',dt,', dt_world=',dt_world,&
              ',T(GXB-',CX,',GYB-',CY,')=',T(local_nx+1-CX,local_ny+1-CY)
              !print *, T
@@ -206,7 +214,7 @@
        end do
        !$aeg-omp target exit data map(from:T) map(delete:T_new)
        !$acc exit data copyout(T) delete(T_new)
-       print "(a,i4,2(a,f15.10),2(a,i2),(a,f15.10))",&
+       print "(a,i4,2(a,f15.10),2(a,i2),(a,f25.10))",&
        'Iteration ',iteration,', dt ',dt,', dt_world=',dt_world,&
        ',T(GXB-',CX,',GYB-',CY,')=',T(local_nx+1-CX,local_ny+1-CY)
        !print *, T
@@ -286,7 +294,8 @@
 ! ------ interior of the array
        do j=0,hny+1
           do i=0,hnx+1
-             T(i,j)=0.0
+             !T(i,j)=0.0
+             T(i,j)=dble((ixstart+i-1)+(jystart+j-1))
           end do
        end do
 

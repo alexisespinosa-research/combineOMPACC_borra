@@ -2,10 +2,13 @@
 
        implicit none
 !       integer, parameter ::  GRIDX=2048, GRIDY=2048
-       integer, parameter ::  GRIDX=16384, GRIDY=16384
+!       integer, parameter ::  GRIDX=16384, GRIDY=16384
+       integer ::  GRIDX, GRIDY
        double precision, parameter :: MAX_TEMP_ERROR=0.02
-       double precision  T(GRIDX+2,GRIDY+2)
-       double precision  T_new(GRIDX+2,GRIDY+2)
+!       double precision ::  T(GRIDX+2,GRIDY+2)
+!       double precision ::  T_new(GRIDX+2,GRIDY+2)
+       double precision, allocatable, target ::  T(:,:)
+       double precision, allocatable, target ::  T_new(:,:)
        integer i,j
        integer max_iterations
        integer :: iteration=1 
@@ -14,17 +17,26 @@
        integer start_time,stop_time,clock_rate
        real elapsed_time
 
-       if (command_argument_count().ne.1) then
+       ! -------- Checking if input arguments are correct
+       if (command_argument_count().ne.3) then
          call getarg(0, arg)
-         print *, 'Usage ',trim(arg),' number_of_iterations'
-       else 
+         print *, 'Usage: ',trim(arg),' <number_of_iterations> <grid_size_in_X> <grid_size_in_Y>'
+         stop
+       else
          call getarg(1,arg)
          read(arg,*)  max_iterations
-       end if 
+         call getarg(2,arg)
+         read(arg,*)  GRIDX
+         call getarg(3,arg)
+         read(arg,*)  GRIDY
+       end if
 
        call system_clock(count_rate=clock_rate)
        call system_clock(count=start_time)
 
+       ! --------- Allocating and Initialising distributed array
+       allocate(T(GRIDX+2,0:GRIDY+2))
+       allocate(T_new(GRIDX+2,0:GRIDY+2))
        call init(GRIDX,GRIDY,T)
 
        !simulation iterations

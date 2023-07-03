@@ -26,7 +26,7 @@
        integer max_iterations
        integer :: iteration=1 
        double precision :: dt=0.0,dt_world=100
-       character(len=32) :: arg
+       character(len=256) :: arg
        double precision :: start_time,stop_time
        real elapsed_time
        integer :: ierr, csize, myrank, requests(4)
@@ -35,6 +35,7 @@
        integer :: ixstart,jystart,leftx,lefty
        integer :: devTotal,devHere
        integer(acc_device_kind) :: hereDeviceType
+       integer :: checkInput
 
 ! -------- MPI startup
        call mpi_init(ierr)
@@ -48,14 +49,21 @@
        call acc_set_device_num(devHere,acc_get_device_type()) !acc_device_amd or acc_device_radeon
        !aeg:call omp_set_default_device(devHere)
 
-! -------- Checking arguments are correct
+       ! -------- Checking if input arguments are correct
+       checkInput=0
        if (myrank == 0) then
           if (command_argument_count().ne.3) then
             call getarg(0, arg)
             print *, 'Usage: ',trim(arg),' <number_of_iterations> <grid_size_in_X> <grid_size_in_Y>'
-            stop
+            checkInput=-1
           end if
        end if
+       call mpi_bcast(checkInput, 1, MPI_INT, 0, MPI_COMM_WORLD,ierr);
+       if (checkInput /= 0) then
+          call mpi_finalize(ierr)
+          stop
+       end if
+
        call getarg(1,arg)
        read(arg,*)  max_iterations
        call getarg(2,arg)
@@ -103,8 +111,10 @@
        Tp=>T
        Tp_new=>T_new
        print *, 'myrank=',myrank,', Passed pointer pointing'
+       !call init_linear128(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
        !call init_linear128(Tp,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
-       call init_fixedIndexVal(Tp,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       call init_fixedIndexVal(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       !call init_fixedIndexVal(Tp,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
        !print *,Tp
 
 ! --------- Simulation Iterations
@@ -125,8 +135,8 @@
           !$acc parallel loop collapse(2)
           do j=1,local_ny
              do i=1,local_nx
-                !T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
-                Tp_new(i,j)=0.25*(Tp(i+1,j)+Tp(i-1,j)+Tp(i,j+1)+Tp(i,j-1))
+                T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
+                !Tp_new(i,j)=0.25*(Tp(i+1,j)+Tp(i-1,j)+Tp(i,j+1)+Tp(i,j-1))
              end do
           end do 
           !$acc end parallel loop
@@ -139,10 +149,10 @@
           !$acc parallel loop collapse(2) reduction(max:dt)
           do j=1,local_ny
              do i=1,local_nx
-                !dt = max(abs(T_new(i,j)-T(i,j)),dt)
-                !T(i,j)=T_new(i,j)
-                dt = max(abs(Tp_new(i,j)-Tp(i,j)),dt)
-                Tp(i,j)=Tp_new(i,j)
+                dt = max(abs(T_new(i,j)-T(i,j)),dt)
+                T(i,j)=T_new(i,j)
+                !dt = max(abs(Tp_new(i,j)-Tp(i,j)),dt)
+                !Tp(i,j)=Tp_new(i,j)
              end do
           end do
           !$acc end parallel loop
@@ -204,9 +214,9 @@
           !periodically print largest change
           if (mod(iteration,100).eq.0) then
           !if (mod(iteration,1).eq.0) then
-             print "(a,i4,2(a,f15.10),2(a,i2),(a,f15.10))",&
+             print "(a,i4,2(a,f15.10),2(a,i2),(a,f25.10))",&
              'Iteration ',iteration,', dt ',dt,', dt_world=',dt_world,&
-             ',T(GXB-',CX,',GYB-',CY,')=',Tp(local_nx+1-CX,local_ny+1-CY)
+             ',T(GXB-',CX,',GYB-',CY,')=',T(local_nx+1-CX,local_ny+1-CY)
              !print *, Tp
           end if  
 
@@ -214,9 +224,9 @@
        end do
        !$aeg-omp target exit data map(from:Tp) map(delete:Tp_new)
        !$acc exit data copyout(Tp) delete(Tp_new)
-       print "(a,i4,2(a,f15.10),2(a,i2),(a,f15.10))",&
+       print "(a,i4,2(a,f15.10),2(a,i2),(a,f25.10))",&
        'Iteration ',iteration,', dt ',dt,', dt_world=',dt_world,&
-       ',T(GXB-',CX,',GYB-',CY,')=',Tp(local_nx+1-CX,local_ny+1-CY)
+       ',T(GXB-',CX,',GYB-',CY,')=',T(local_nx+1-CX,local_ny+1-CY)
        !print *, Tp
 
        stop_time=MPI_Wtime()
@@ -262,6 +272,7 @@
              T(i,hny+1)=(128.0/dble(nxtot))*dble(ixstart+i-1)   
           end do
        end if
+
 ! ----- if the piece is part of the top boundary bx=1
 ! ----- set left boundary to 0
        if (bx == 1) then
@@ -295,7 +306,7 @@
        do j=0,hny+1
           do i=0,hnx+1
              !T(i,j)=0.0
-             T(i,j)=i+j
+             T(i,j)=dble((ixstart+i-1)+(jystart+j-1))
           end do
        end do
 
