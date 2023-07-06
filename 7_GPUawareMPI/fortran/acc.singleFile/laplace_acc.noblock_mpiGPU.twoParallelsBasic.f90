@@ -2,7 +2,7 @@
        use mpi
        use openacc
        !use iso_c_binding, only :: c_ptr, c_loc, c_f_pointer
-       use iso_c_binding
+       !use iso_c_binding
 
        implicit none
 !       integer, parameter ::  GRIDX=3, GRIDY=6
@@ -113,8 +113,8 @@
        print *, 'myrank=',myrank,', Passed pointer pointing'
        !call init_linear128(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
        !call init_linear128(Tp,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
-       call init_fixedIndexVal(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
-       !call init_fixedIndexVal(Tp,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       !call init_fixedIndexVal(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       call init_fixedIndexVal(Tp,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
        !print *,Tp
 
 ! --------- Simulation Iterations
@@ -135,8 +135,8 @@
           !$acc parallel loop collapse(2)
           do j=1,local_ny
              do i=1,local_nx
-                T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
-                !Tp_new(i,j)=0.25*(Tp(i+1,j)+Tp(i-1,j)+Tp(i,j+1)+Tp(i,j-1))
+                !T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
+                Tp_new(i,j)=0.25*(Tp(i+1,j)+Tp(i-1,j)+Tp(i,j+1)+Tp(i,j-1))
              end do
           end do 
           !$acc end parallel loop
@@ -149,10 +149,10 @@
           !$acc parallel loop collapse(2) reduction(max:dt)
           do j=1,local_ny
              do i=1,local_nx
-                dt = max(abs(T_new(i,j)-T(i,j)),dt)
-                T(i,j)=T_new(i,j)
-                !dt = max(abs(Tp_new(i,j)-Tp(i,j)),dt)
-                !Tp(i,j)=Tp_new(i,j)
+                !dt = max(abs(T_new(i,j)-T(i,j)),dt)
+                !T(i,j)=T_new(i,j)
+                dt = max(abs(Tp_new(i,j)-Tp(i,j)),dt)
+                Tp(i,j)=Tp_new(i,j)
              end do
           end do
           !$acc end parallel loop
