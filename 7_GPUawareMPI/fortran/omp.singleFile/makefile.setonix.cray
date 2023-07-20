@@ -10,12 +10,12 @@ SURNAME?=twoParallelsBasic
 # --------------------
 CC=cc
 F90=ftn
-CFLAGS=-O3 -fopenacc -rm
-FFLAGS=-O3 -hacc -rm
+CFLAGS=-O3 -fopenmp -rm
+FFLAGS=-O3 -homp -rm
 LIBS=
 COMPILER_TAG=-D_CRAY_
-OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
-TARGET=laplace_acc.$(MPISURNAME).$(SURNAME).exe
+OBJ=laplace_omp.$(MPISURNAME).$(SURNAME).o
+TARGET=laplace_omp.$(MPISURNAME).$(SURNAME).exe
 
 %.o: %.f90
 	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
