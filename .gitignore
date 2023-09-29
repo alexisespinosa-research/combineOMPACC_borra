@@ -21,3 +21,6 @@ results.sysinfo.txt
 a.out
 slurm*.out
 *.out
+*.inst
+workload*
+profiling*

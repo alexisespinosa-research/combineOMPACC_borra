@@ -1,19 +1,10 @@
        program laplace
        use mpi
-       use openacc !aeg:eye:using only for the bandaid with acc_get_num_devices
+       use omp_lib 
        !use iso_c_binding, only :: c_ptr, c_loc, c_f_pointer
-       use iso_c_binding
+       !use iso_c_binding
 
        implicit none
-!       integer, parameter ::  GRIDX=3, GRIDY=6
-!       integer, parameter ::  GRIDX=100, GRIDY=100
-!       integer, parameter ::  GRIDX=1024, GRIDY=1024
-!       integer, parameter ::  GRIDX=2048, GRIDY=2048
-!       integer, parameter ::  GRIDX=8192, GRIDY=8192
-!       integer, parameter ::  GRIDX=8192, GRIDY=4096
-!       integer, parameter ::  GRIDX=16384, GRIDY=16384
-!       integer, parameter ::  GRIDX=16384, GRIDY=8192
-!       integer, parameter ::  GRIDX=8192, GRIDY=16384
        integer :: GRIDX, GRIDY
        integer :: nx,ny
        double precision, parameter :: MAX_TEMP_ERROR=0.02
@@ -35,6 +26,10 @@
        integer :: ixstart,jystart,leftx,lefty
        integer :: devTotal,devHere
        integer :: checkInput
+! Declarations for pinning memory for the arrays       
+       integer(omp_memspace_handle_kind ) :: Ts_memspace = omp_default_mem_space
+       type( omp_alloctrait ) :: Ts_traits(1) = [omp_alloctrait(omp_atk_pinned,"true")]
+       integer(omp_allocator_handle_kind) :: Ts_alloc
 
 ! -------- MPI startup
        call mpi_init(ierr)
@@ -43,8 +38,8 @@
 
 ! -------- Choosing device
        !aeg:eye:using the acc function as omp_get_num_devices is not compiling
-       devTotal=acc_get_num_devices(acc_get_device_type())
-       !aeg:devTotal=omp_get_num_devices()
+       !devTotal=acc_get_num_devices(acc_get_device_type())
+       devTotal=omp_get_num_devices()
        devHere=mod(myRank,devTotal)
        !aeg:call acc_set_device_num(devHere,acc_get_device_type()) !acc_device_amd or acc_device_radeon
        call omp_set_default_device(devHere)
@@ -92,7 +87,7 @@
        end if
        print *, 'myrank=',myrank,', of total csize=',csize
        print *, 'myrank=',myrank,', has local device number=',devHere, &
-                ' of total avail devices in node=',devTotal
+                ' of total avail devices to this rank=',devTotal
        print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
        print *, 'myrank=',myrank,',local_ny=',local_ny, &
                 ' of total ny=',ny,' with jystart=',jystart
@@ -106,8 +101,9 @@
 
 
 ! --------- Allocating and Initialising distributed array
-       allocate(T(0:local_nx+1,0:local_ny+1))
-       allocate(T_new(0:local_nx+1,0:local_ny+1))
+       Ts_alloc = omp_init_allocator( Ts_memspace, 1, Ts_traits)
+       !$omp allocate(Tp,Tp_new) allocator(Ts_alloc)
+       allocate(T(0:local_nx+1,0:local_ny+1),T_new(0:local_nx+1,0:local_ny+1))
        Tp=>T
        Tp_new=>T_new
        print *, 'myrank=',myrank,', Passed pointer pointing'
@@ -130,8 +126,8 @@
           dt_world=0.0
 
           !main computational kernel, average over neighbours in the grid
-          !$omp target teams
-          !$omp distribute parallel do collapse(2)
+          !$omp target
+          !$omp teams distribute parallel do simd collapse(2)
           !$aeg-acc parallel loop collapse(2)
           do j=1,local_ny
              do i=1,local_nx
@@ -140,12 +136,12 @@
              end do
           end do 
           !$aeg-acc end parallel loop
-          !$omp end distribute parallel do
-          !$omp end target teams
+          !$omp end teams distribute parallel do simd
+          !$omp end target
 
           !compute the largest change and copy T_new to T 
-          !$omp target teams map(dt) reduction(max:dt)
-          !$omp distribute parallel do collapse(2) reduction(max:dt)
+          !$omp target map(dt)
+          !$omp teams distribute parallel do simd collapse(2) reduction(max:dt)
           !$aeg-acc parallel loop collapse(2) reduction(max:dt)
           do j=1,local_ny
              do i=1,local_nx
@@ -156,8 +152,8 @@
              end do
           end do
           !$aeg-acc end parallel loop
-          !$omp end distribute parallel do
-          !$omp end target teams
+          !$omp end teams distribute parallel do simd
+          !$omp end target
 
           !---- Retrieve own-edge data from the GPU:
           !$aeg-omp target update from(Tp(1:local_nx,1:1))
@@ -234,6 +230,7 @@
        print "(a,f10.6,a)",'Total time was ',elapsed_time,' seconds.'
 
        deallocate(T, T_new)
+!       deallocate(Tp, Tp_new)
        call mpi_finalize(ierr)
 
 ! ===============================================

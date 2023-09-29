@@ -49,16 +49,18 @@ int main(int argc, char *argv[]) {
 
         // main computational kernel, average over neighbours in the grid
         #pragma omp target
-        #pragma omp teams distribute parallel for collapse(2)
+        #pragma omp teams distribute
         for(i = 1; i <= GRIDX; i++) 
+	    #pragma omp parallel for
             for(j = 1; j <= GRIDY; j++) 
                 T_new[i][j] = 0.25 * (T[i+1][j] + T[i-1][j] +
                                             T[i][j+1] + T[i][j-1]);
 
         // compute the largest change and copy T_new to T
         #pragma omp target map(dt)
-        #pragma omp teams distribute parallel for collapse(2) reduction(max:dt)
+        #pragma omp teams distribute reduction(max:dt)
         for(i = 1; i <= GRIDX; i++){
+            #pragma omp parallel for reduction(max:dt)
             for(j = 1; j <= GRIDY; j++){
 	            dt = MAX( fabs(T_new[i][j]-T[i][j]), dt);
 	            T[i][j] = T_new[i][j];

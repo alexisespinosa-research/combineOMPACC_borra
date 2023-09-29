@@ -6,8 +6,6 @@ VENDOR=cray
 MPISURNAME?=noblock_mpiGPU
 #SURNAME?=singleParallelBasic
 #SURNAME?=twoParallelsSIMD
-#SURNAME?=twoParallelsSpread
-#SURNAME?=twoParallelsOuterLoop
 SURNAME?=twoParallelsBasic
 
 # --------------------
