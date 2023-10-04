@@ -1,10 +1,20 @@
        program laplace
        use mpi
        use openacc
+       !aeg:use omp_lib
        !use iso_c_binding, only :: c_ptr, c_loc, c_f_pointer
        !use iso_c_binding
 
        implicit none
+!       integer, parameter ::  GRIDX=4, GRIDY=8
+!       integer, parameter ::  GRIDX=100, GRIDY=100
+!       integer, parameter ::  GRIDX=1024, GRIDY=1024
+!       integer, parameter ::  GRIDX=2048, GRIDY=2048
+!       integer, parameter ::  GRIDX=8192, GRIDY=8192
+!       integer, parameter ::  GRIDX=8192, GRIDY=4096
+!       integer, parameter ::  GRIDX=16384, GRIDY=16384
+!       integer, parameter ::  GRIDX=16384, GRIDY=8192
+!       integer, parameter ::  GRIDX=8192, GRIDY=16384
        integer :: GRIDX, GRIDY
        integer :: nx,ny
        double precision, parameter :: MAX_TEMP_ERROR=0.02
@@ -22,7 +32,7 @@
        integer status(MPI_STATUS_SIZE)
        integer :: local_nx,local_ny,bx,by,bxtot,bytot
        integer :: ixstart,jystart,leftx,lefty
-       integer :: devTotal,devHere
+       integer :: devVisible,devHere
        integer(acc_device_kind) :: hereDeviceType
        integer :: checkInput
 
@@ -32,9 +42,9 @@
        call mpi_comm_rank(MPI_COMM_WORLD, myrank, ierr)
 
 ! -------- Choosing device
-       devTotal=acc_get_num_devices(acc_get_device_type())
-       !aeg:devTotal=omp_get_num_devices()
-       devHere=mod(myRank,devTotal)
+       devVisible=acc_get_num_devices(acc_get_device_type())
+       !aeg:devVisible=omp_get_num_devices()
+       devHere=mod(myRank,devVisible)
        call acc_set_device_num(devHere,acc_get_device_type()) !acc_device_amd or acc_device_radeon
        !aeg:call omp_set_default_device(devHere)
 
@@ -79,13 +89,12 @@
        else
           jystart=jystart+(by-1)
        end if
-!       print *, 'myrank=',myrank,', of total csize=',csize
+       print *, 'myrank=',myrank,', of total ranks in this job csize=',csize
        print *, 'myrank=',myrank,', has local device number=',devHere, &
-                ' of total avail devices in node=',devTotal
-!       print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
-!       print *, 'myrank=',myrank,',local_ny=',local_ny, &
-!                ' of total ny=',ny,' with jystart=',jystart
-
+                ' of total visible devices for this rank devVisible=',devVisible
+       print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
+       print *, 'myrank=',myrank,',local_ny=',local_ny, &
+                ' of total ny=',ny,' with jystart=',jystart
 
 !      -- X direction
        bxtot=1

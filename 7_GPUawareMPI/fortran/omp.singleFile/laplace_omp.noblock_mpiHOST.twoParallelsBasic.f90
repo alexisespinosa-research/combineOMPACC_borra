@@ -1,8 +1,9 @@
        program laplace
        use mpi
-       use openacc !aeg:eye:using only for the bandaid with acc_get_num_devices
+       !aeg:use openacc
+       use omp_lib
        !use iso_c_binding, only :: c_ptr, c_loc, c_f_pointer
-       use iso_c_binding
+       !use iso_c_binding
 
        implicit none
 !       integer, parameter ::  GRIDX=4, GRIDY=8
@@ -31,7 +32,7 @@
        integer status(MPI_STATUS_SIZE)
        integer :: local_nx,local_ny,bx,by,bxtot,bytot
        integer :: ixstart,jystart,leftx,lefty
-       integer :: devTotal,devHere
+       integer :: devVisible,devHere
        integer :: checkInput
 
 ! -------- MPI startup
@@ -40,10 +41,9 @@
        call mpi_comm_rank(MPI_COMM_WORLD, myrank, ierr)
 
 ! -------- Choosing device
-       !aeg:eye:using the acc function as omp_get_num_devices is not compiling
-       devTotal=acc_get_num_devices(acc_get_device_type())
-       !aeg:devTotal=omp_get_num_devices()
-       devHere=mod(myRank,devTotal)
+       !aeg:devVisible=acc_get_num_devices(acc_get_device_type())
+       devVisible=omp_get_num_devices()
+       devHere=mod(myRank,devVisible)
        !aeg:call acc_set_device_num(devHere,acc_get_device_type()) !acc_device_amd or acc_device_radeon
        call omp_set_default_device(devHere)
 
@@ -88,13 +88,12 @@
        else
           jystart=jystart+(by-1)
        end if
-!       print *, 'myrank=',myrank,', of total csize=',csize
+       print *, 'myrank=',myrank,', of total ranks in this job csize=',csize
        print *, 'myrank=',myrank,', has local device number=',devHere, &
-                ' of total avail devices in node=',devTotal
-!       print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
-!       print *, 'myrank=',myrank,',local_ny=',local_ny, &
-!                ' of total ny=',ny,' with jystart=',jystart
-
+                ' of total visible devices for this rank devVisible=',devVisible
+       print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
+       print *, 'myrank=',myrank,',local_ny=',local_ny, &
+                ' of total ny=',ny,' with jystart=',jystart
 
 !      -- X direction
        bxtot=1
