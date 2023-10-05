@@ -1,5 +1,6 @@
        program laplace
        use mpi
+       !aeg:use openacc
        use omp_lib 
        !use iso_c_binding, only :: c_ptr, c_loc, c_f_pointer
        !use iso_c_binding
@@ -16,7 +17,7 @@
        integer i,j
        integer max_iterations
        integer :: iteration=1 
-       double precision :: dt=100.0,dt_world=100.0
+       double precision :: dt=0.0,dt_world=100
        character(len=256) :: arg
        double precision :: start_time,stop_time
        real elapsed_time
@@ -24,7 +25,7 @@
        integer status(MPI_STATUS_SIZE)
        integer :: local_nx,local_ny,bx,by,bxtot,bytot
        integer :: ixstart,jystart,leftx,lefty
-       integer :: devTotal,devHere
+       integer :: devVisible,devHere
        integer :: checkInput
 ! Declarations for pinning memory for the arrays       
        integer(omp_memspace_handle_kind ) :: Ts_memspace = omp_default_mem_space
@@ -37,10 +38,9 @@
        call mpi_comm_rank(MPI_COMM_WORLD, myrank, ierr)
 
 ! -------- Choosing device
-       !aeg:eye:using the acc function as omp_get_num_devices is not compiling
-       !devTotal=acc_get_num_devices(acc_get_device_type())
-       devTotal=omp_get_num_devices()
-       devHere=mod(myRank,devTotal)
+       !aeg:devVisible=acc_get_num_devices(acc_get_device_type())
+       devVisible=omp_get_num_devices()
+       devHere=mod(myRank,devVisible)
        !aeg:call acc_set_device_num(devHere,acc_get_device_type()) !acc_device_amd or acc_device_radeon
        call omp_set_default_device(devHere)
 
@@ -85,9 +85,9 @@
        else
           jystart=jystart+(by-1)
        end if
-       print *, 'myrank=',myrank,', of total csize=',csize
+       print *, 'myrank=',myrank,', of total ranks in this job csize=',csize
        print *, 'myrank=',myrank,', has local device number=',devHere, &
-                ' of total avail devices to this rank=',devTotal
+                ' of total visible devices for this rank devVisible=',devVisible
        print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
        print *, 'myrank=',myrank,',local_ny=',local_ny, &
                 ' of total ny=',ny,' with jystart=',jystart
@@ -127,8 +127,7 @@
 
           !main computational kernel, average over neighbours in the grid
           !$omp target
-          !$aeg-omp teams distribute
-          !$omp teams distribute num_teams(55)
+          !$omp teams distribute
           !$aeg-acc parallel
           !$aeg-acc loop gang
           do j=1,local_ny
@@ -148,8 +147,7 @@
 
           !compute the largest change and copy T_new to T 
           !$omp target map(dt)
-          !$aeg-omp teams distribute reduction(max:dt)
-          !$omp teams distribute reduction(max:dt) num_teams(55)
+          !$omp teams distribute reduction(max:dt)
           !$aeg-acc parallel reduction(max:dt)
           !$aeg-acc loop gang reduction(max:dt)
           do j=1,local_ny

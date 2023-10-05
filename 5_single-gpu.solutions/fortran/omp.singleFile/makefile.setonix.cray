@@ -2,11 +2,9 @@
 # reset this from the command line for easier making of other test code:
 CLUSTER=setonix
 VENDOR=cray
-#MPISURNAME?=noblock_mpiHOST
-MPISURNAME?=noblock_mpiGPU
-#SURNAME?=singleParallelBasic
-#SURNAME?=twoParallelsSIMD
-SURNAME?=twoParallelsBasic
+#SURNAME?=singleKernelBasic
+#SURNAME?=twoKernelsSIMD
+SURNAME?=twoKernelsBasic
 
 # --------------------
 CC=cc
@@ -15,8 +13,8 @@ CFLAGS=-O3 -fopenmp -rm
 FFLAGS=-O3 -homp -rm
 LIBS=
 COMPILER_TAG=-D_CRAY_
-OBJ=laplace_omp.$(MPISURNAME).$(SURNAME).o
-TARGET=laplace_omp.$(MPISURNAME).$(SURNAME).exe
+OBJ=laplace_omp.$(SURNAME).o
+TARGET=laplace_omp.$(SURNAME).exe
 
 %.o: %.f90
 	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<

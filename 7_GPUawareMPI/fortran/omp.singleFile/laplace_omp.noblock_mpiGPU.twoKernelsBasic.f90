@@ -1,5 +1,6 @@
        program laplace
        use mpi
+       !aeg:use openacc
        use omp_lib 
        !use iso_c_binding, only :: c_ptr, c_loc, c_f_pointer
        !use iso_c_binding
@@ -16,15 +17,15 @@
        integer i,j
        integer max_iterations
        integer :: iteration=1 
-       double precision :: dt=100.0,dt_world=100.0
+       double precision :: dt=0.0,dt_world=100
        character(len=256) :: arg
        double precision :: start_time,stop_time
-       real elapsed_time
+       real :: elapsed_time
        integer :: ierr, csize, myrank, requests(4)
        integer status(MPI_STATUS_SIZE)
        integer :: local_nx,local_ny,bx,by,bxtot,bytot
        integer :: ixstart,jystart,leftx,lefty
-       integer :: devTotal,devHere
+       integer :: devVisible,devHere
        integer :: checkInput
 ! Declarations for pinning memory for the arrays       
        integer(omp_memspace_handle_kind ) :: Ts_memspace = omp_default_mem_space
@@ -37,10 +38,9 @@
        call mpi_comm_rank(MPI_COMM_WORLD, myrank, ierr)
 
 ! -------- Choosing device
-       !aeg:eye:using the acc function as omp_get_num_devices is not compiling
-       !devTotal=acc_get_num_devices(acc_get_device_type())
-       devTotal=omp_get_num_devices()
-       devHere=mod(myRank,devTotal)
+       !aeg:devVisible=acc_get_num_devices(acc_get_device_type())
+       devVisible=omp_get_num_devices()
+       devHere=mod(myRank,devVisible)
        !aeg:call acc_set_device_num(devHere,acc_get_device_type()) !acc_device_amd or acc_device_radeon
        call omp_set_default_device(devHere)
 
@@ -74,7 +74,7 @@
        by=myrank+1
        local_ny=ny/bytot
        if (local_ny*bytot .lt. ny) then
-          if (by-1 .lt. ny-local_ny*bytot) then 
+          if (by-1 .lt. ny-local_ny*bytot) then
              local_ny=local_ny+1
           end if
        end if
@@ -85,9 +85,9 @@
        else
           jystart=jystart+(by-1)
        end if
-       print *, 'myrank=',myrank,', of total csize=',csize
+       print *, 'myrank=',myrank,', of total ranks in this job csize=',csize
        print *, 'myrank=',myrank,', has local device number=',devHere, &
-                ' of total avail devices to this rank=',devTotal
+                ' of total visible devices for this rank devVisible=',devVisible
        print *, 'myrank=',myrank,', by=',by,' of total bytot=',bytot
        print *, 'myrank=',myrank,',local_ny=',local_ny, &
                 ' of total ny=',ny,' with jystart=',jystart
@@ -127,45 +127,33 @@
 
           !main computational kernel, average over neighbours in the grid
           !$omp target
-          !$omp teams distribute
-          !$aeg-acc parallel
-          !$aeg-acc loop gang
+          !$omp teams distribute parallel do simd collapse(2)
+          !$aeg-acc parallel loop collapse(2)
           do j=1,local_ny
-             !$omp parallel do simd
-             !$aeg-acc loop worker
              do i=1,local_nx
                 !T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
                 Tp_new(i,j)=0.25*(Tp(i+1,j)+Tp(i-1,j)+Tp(i,j+1)+Tp(i,j-1))
              end do
-             !$omp end parallel do simd
-             !$aeg-acc end loop
           end do 
-          !$omp end teams distribute
+          !$aeg-acc end parallel loop
+          !$omp end teams distribute parallel do simd
           !$omp end target
-          !$aeg-acc end loop
-          !$aeg-acc end parallel
 
           !compute the largest change and copy T_new to T 
           !$omp target map(dt)
-          !$omp teams distribute reduction(max:dt)
-          !$aeg-acc parallel reduction(max:dt)
-          !$aeg-acc loop gang reduction(max:dt)
+          !$omp teams distribute parallel do simd collapse(2) reduction(max:dt)
+          !$aeg-acc parallel loop collapse(2) reduction(max:dt)
           do j=1,local_ny
-             !$omp parallel do simd reduction(max:dt)
-             !$aeg-acc loop worker reduction(max:dt)
              do i=1,local_nx
                 !dt = max(abs(T_new(i,j)-T(i,j)),dt)
                 !T(i,j)=T_new(i,j)
                 dt = max(abs(Tp_new(i,j)-Tp(i,j)),dt)
                 Tp(i,j)=Tp_new(i,j)
              end do
-             !$omp end parallel do simd
-             !$aeg-acc end loop
           end do
-          !$omp end teams distribute
+          !$aeg-acc end parallel loop
+          !$omp end teams distribute parallel do simd
           !$omp end target
-          !$aeg-acc end loop
-          !$aeg-acc end parallel
 
           !---- Retrieve own-edge data from the GPU:
           !$aeg-omp target update from(Tp(1:local_nx,1:1))

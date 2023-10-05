@@ -4,11 +4,11 @@ CLUSTER=setonix
 VENDOR=cray
 #MPISURNAME?=noblock_mpiHOST
 MPISURNAME?=noblock_mpiGPU
-#SURNAME?=singleParallelBasic
-#SURNAME?=twoParallelsSIMD
-#SURNAME?=twoParallelsSpread
-#SURNAME?=twoParallelsOuterLoop
-SURNAME?=twoParallelsBasic
+#SURNAME?=singleKernelBasic
+#SURNAME?=twoKernelsSIMD
+#SURNAME?=twoKernelsSpread
+#SURNAME?=twoKernelsOuterLoop
+SURNAME?=twoKernelsBasic
 
 # --------------------
 CC=cc
