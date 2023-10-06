@@ -28,7 +28,7 @@ $(TARGET): $(OBJ)
 	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
 
 cleanAll:
-	rm -f *.exe *.o *.s *.lst
+	rm -f *.exe *.o *.s *.lst *.i
 
 cleanThis:
 	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s

@@ -125,29 +125,33 @@
           !main computational kernel, average over neighbours in the grid
           !$omp target
           !$omp teams distribute parallel do simd collapse(2)
-          !$aeg-acc parallel loop collapse(2)
+          !$aeg-acc parallel
+          !$aeg-acc loop gang worker vector collapse(2)
           do j=1,local_ny
              do i=1,local_nx
                 T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
              end do
           end do 
-          !$aeg-acc end parallel loop
           !$omp end teams distribute parallel do simd
           !$omp end target
+          !$aeg-acc end loop
+          !$aeg-acc end parallel
 
           !compute the largest change and copy T_new to T 
           !$omp target map(dt)
           !$omp teams distribute parallel do simd collapse(2) reduction(max:dt)
-          !$aeg-acc parallel loop collapse(2) reduction(max:dt)
+          !$aeg-acc parallel copy(dt)
+          !$aeg-acc loop gang worker vector collapse(2) reduction(max:dt)
           do j=1,local_ny
              do i=1,local_nx
                 dt = max(abs(T_new(i,j)-T(i,j)),dt)
                 T(i,j)=T_new(i,j)
              end do
           end do
-          !$aeg-acc end parallel loop
           !$omp end teams distribute parallel do simd
           !$omp end target
+          !$aeg-acc end loop
+          !$aeg-acc end parallel
 
           !---- MPI sharing of inividual halos:
           if (csize.gt.1) then
@@ -168,8 +172,8 @@
                 call mpi_irecv(T(1,0),local_nx, MPI_DOUBLE,&
                               myrank-1,0,MPI_COMM_WORLD,requests(2),ierr)
                 !print *,'End to deal with left'
-                !$aeg-acc end host_data
                 !$aeg-omp end target data
+                !$aeg-acc end host_data
              end if
 
              !---- send own-right-edge into the neigh-right-left-halo region
@@ -183,8 +187,8 @@
                 call mpi_irecv(T(1,local_ny+1),local_nx, MPI_DOUBLE,&
                               myrank+1,0,MPI_COMM_WORLD,requests(4),ierr)
                 !print *,'End to deal with right'
-                !$aeg-acc end host_data
                 !$aeg-omp end target data
+                !$aeg-acc end host_data
              end if
 
              !---- Waiting for the MPI messages to finalise

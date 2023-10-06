@@ -61,6 +61,7 @@
        call system_clock(count_rate=clock_rate)
        call system_clock(count=start_time)
        !$omp target enter data map(to:T) map(alloc:T_new)
+       !$aeg-acc enter data copyin(T) create(T_new)
        do while ((dt.gt.MAX_TEMP_ERROR).and. &
                 (iteration.le.max_iterations))
 
@@ -70,6 +71,8 @@
           !main computational kernel, average over neighbours in the grid
           !$omp target
           !$omp teams distribute parallel do simd collapse(2)
+          !$aeg-acc parallel
+          !$aeg-acc loop gang worker vector collapse(2)
           do j=1,ny
              do i=1,nx
                 T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
@@ -77,10 +80,14 @@
           end do 
           !$omp end teams distribute parallel do simd
           !$omp end target
+          !$aeg-acc end loop
+          !$aeg-acc end paralel
 
           !compute the largest change and copy T_new to T 
           !$omp target  map(dt)
           !$omp teams distribute parallel do simd collapse(2) reduction(max:dt)
+          !$aeg-acc parallel
+          !$aeg-acc loop gang worker vector collapse(2) reduction(max:dt)
           do j=1,ny
              do i=1,nx
                 dt = max(abs(T_new(i,j)-T(i,j)),dt)
@@ -89,6 +96,8 @@
           end do
           !$omp end teams distribute parallel do simd
           !$omp end target
+          !$aeg-acc end loop
+          !$aeg-acc end paralel
 
           !periodically print largest change
           if (mod(iteration,100).eq.0) then
@@ -102,6 +111,7 @@
           iteration=iteration+1        
        end do
        !$omp target exit data map(from:T) map(delete:T_new)
+       !$aeg-acc exit data copyout(T) delete(T_new)
        print "(a,i4,1(a,f15.10),2(a,i2),(a,f25.10))",&
        'Iteration ',iteration,', dt ',dt,&
        ',T(GXB-',CX,',GYB-',CY,')=',T(nx+1-CX,ny+1-CY)

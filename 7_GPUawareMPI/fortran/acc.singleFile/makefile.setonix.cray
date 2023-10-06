@@ -4,31 +4,47 @@ CLUSTER=setonix
 VENDOR=cray
 #MPISURNAME?=noblock_mpiHOST
 MPISURNAME?=noblock_mpiGPU
-#SURNAME?=singleParallelBasic
-SURNAME?=twoParallelsBasic
+OFFLOADTYPE?=OPENACC
+#SURNAME?=singleKernelBasic
+SURNAME?=twoKernelsBasic
+
+# --------------------
+# Tags used for preprocess and compile options
+COMPILER_TAG=-D_CRAY_
+ifeq ($(OFFLOADTYPE),OPENMP)
+   OFFLOAD_TAG=-D_OLOMP_
+   OFFLOAD_CFLAG=-hopenmp
+   OFFLOAD_FFLAG=-homp
+   OFFLOAD_SURNAME=omp
+else ifeq ($(OFFLOADTYPE),OPENACC)
+   OFFLOAD_TAG=-D_OLACC_
+   OFFLOAD_CFLAG=-hopenacc
+   OFFLOAD_FFLAG=-hacc
+   OFFLOAD_SURNAME=acc
+endif
 
 # --------------------
 CC=cc
 F90=ftn
-CFLAGS=-O3 -fopenacc -rm
-FFLAGS=-O3 -hacc -rm
+CFLAGS=-O3 $(OFFLOAD_CFLAG) -rm
+FFLAGS=-O3 $(OFFLOAD_FFLAG) -rm
 LIBS=
-COMPILER_TAG=-D_CRAY_
-OBJ=laplace_acc.$(MPISURNAME).$(SURNAME).o
-TARGET=laplace_acc.$(MPISURNAME).$(SURNAME).exe
+ALL_TAGS = -eZ $(COMPILER_TAG) $(OFFLOAD_TAG)
+OBJ=laplace.$(MPISURNAME).$(SURNAME).o
+TARGET=laplace.$(MPISURNAME).$(SURNAME).exe
 
 %.o: %.f90
-	$(F90) $(FFLAGS) $(COMPILER_TAG) -c -o $@ $<
+	$(F90) $(FFLAGS) $(ALL_TAGS) -c -o $@ $<
 
 $(TARGET): $(OBJ)
 	$(F90) $(FFLAGS) $(LIBS) -o $@ $^
-	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(TARGET)
+	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(OFFLOAD_SURNAME).$(TARGET)
 
 cleanAll:
-	rm -f *.exe *.o *.s *.lst
+	rm -f *.exe *.o *.s *.lst *.i
 
 cleanThis:
-	rm -f $(CLUSTER).$(VENDOR).$(F90).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+	rm -f $(CLUSTER).$(VENDOR).$(F90).$(OFFLOAD_SURNAME).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
 
 leaveThis:
 	rm -f $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
