@@ -9,8 +9,8 @@
        integer :: nx,ny
        double precision, parameter :: MAX_TEMP_ERROR=0.02
        integer, parameter :: CX=10,CY=10
-       double precision, allocatable, target ::  T(:,:)
-       double precision, allocatable, target ::  T_new(:,:)
+       double precision, allocatable ::  T(:,:)
+       double precision, allocatable ::  T_new(:,:)
        integer i,j
        integer max_iterations
        integer :: iteration=1 
@@ -69,7 +69,7 @@
 ! --------- Distributing the MPI load 
 !      -- Y direction
        bytot=csize
-       by=myrank+1
+       by=myrank+1 !by count starts in 1
        local_ny=ny/bytot
        if (local_ny*bytot .lt. ny) then
           if (by-1 .lt. ny-local_ny*bytot) then 
@@ -90,13 +90,11 @@
        print *, 'myrank=',myrank,',local_ny=',local_ny, &
                 ' of total ny=',ny,' with jystart=',jystart
 
-
 !      -- X direction
        bxtot=1
-       bx=1
+       bx=1 !bx count starts in 1
        local_nx=nx
        ixstart=1
-
 
 ! --------- Allocating and Initialising distributed array
        Ts_alloc = omp_init_allocator( Ts_memspace, 1, Ts_traits)
@@ -105,6 +103,9 @@
        print *, 'myrank=',myrank,', Passed allocation'
        !call init_linear128(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
        call init_fixedIndexVal(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       !call init_iIndex(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       !call init_jIndex(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
+       !call init_0(T,bx,by,bxtot,bytot,ixstart,jystart,nx,ny)
        !print *,T
 
 ! --------- Simulation Iterations
@@ -148,56 +149,61 @@
           !$omp end teams distribute parallel do simd
           !$omp end target
 
-          !---- Retrieve own-edge data from the GPU:
-          !$omp target update from(T(1:local_nx,1:1))
-          !$omp target update from(T(1:local_nx,local_ny:local_ny))
-          !$aeg-acc update self(T(1:local_nx,1:1))
-          !$aeg-acc update self(T(1:local_nx,local_ny:local_ny))
-          !print *,'iteration=',iteration,'ownEdgeLeft=',T(1:local_nx,1:1)
-          !---- send own-left-edge into the neigh-left-right-halo region
-          !   - and receive from neigh-left-right-edge into own-left-halo region
-          if (myrank.gt.0) then
-             !$aeg-omp target data use_device_ptr(T)
-             !$aeg-acc host_data use_device(T)
-             !print *,'Start to deal with left'
-             call mpi_isend(T(1,1),local_nx, MPI_DOUBLE,&
-                           myrank-1,0,MPI_COMM_WORLD,requests(1),ierr)
-             call mpi_irecv(T(1,0),local_nx, MPI_DOUBLE,&
-                           myrank-1,0,MPI_COMM_WORLD,requests(2),ierr)
-             !print *,'End to deal with left'
-             !$aeg-acc end host_data
-             !$aeg-omp end target data
+          !---- MPI sharing of inividual halos:
+          if (csize.gt.1) then
+             !---- Retrieve own-edge data from the GPU:
+             !$omp target update from(T(1:local_nx,1:1))
+             !$omp target update from(T(1:local_nx,local_ny:local_ny))
+             !$aeg-acc update self(T(1:local_nx,1:1))
+             !$aeg-acc update self(T(1:local_nx,local_ny:local_ny))
+             !print *,'iteration=',iteration,'ownEdgeLeft=',T(1:local_nx,1:1)
+             !---- send own-left-edge into the neigh-left-right-halo region
+             !   - and receive from neigh-left-right-edge into own-left-halo region
+             if (myrank.gt.0) then
+                !$aeg-omp target data use_device_ptr(T)
+                !$aeg-acc host_data use_device(T)
+                !print *,'Start to deal with left'
+                call mpi_isend(T(1,1),local_nx, MPI_DOUBLE,&
+                              myrank-1,0,MPI_COMM_WORLD,requests(1),ierr)
+                call mpi_irecv(T(1,0),local_nx, MPI_DOUBLE,&
+                              myrank-1,0,MPI_COMM_WORLD,requests(2),ierr)
+                !print *,'End to deal with left'
+                !$aeg-acc end host_data
+                !$aeg-omp end target data
+             end if
+
+             !---- send own-right-edge into the neigh-right-left-halo region
+             !   - and receive data neigh-right-left-edge into own-right-halo region
+             if (myrank.lt.csize-1) then
+                !$aeg-omp target data use_device_ptr(T)
+                !$aeg-acc host_data use_device(T)
+                !print *,'Start to deal with right'
+                call mpi_isend(T(1,local_ny),local_nx, MPI_DOUBLE,& 
+                              myrank+1,0,MPI_COMM_WORLD,requests(3),ierr)
+                call mpi_irecv(T(1,local_ny+1),local_nx, MPI_DOUBLE,&
+                              myrank+1,0,MPI_COMM_WORLD,requests(4),ierr)
+                !print *,'End to deal with right'
+                !$aeg-acc end host_data
+                !$aeg-omp end target data
+             end if
+
+             !---- Waiting for the MPI messages to finalise
+             !print *,'Start waiting all'
+             call mpi_waitall(4, requests, MPI_STATUSES_IGNORE,ierr)
+             !print *,'End waiting all'
+
+             !---- Send recently-updated own-halo data to the GPU:
+             !$omp target update to(T(1:local_nx,0:0))
+             !$omp target update to(T(1:local_nx,local_ny+1:local_ny+1))
+             !$aeg-acc update device(T(1:local_nx,0:0))
+             !$aeg-acc update device(T(1:local_nx,local_ny+1:local_ny+1))
+
+             !---- reduce the dt value among all MPI ranks
+             call mpi_allreduce(dt, dt_world, 1, MPI_DOUBLE,&
+                                MPI_MAX, MPI_COMM_WORLD, ierr)
+          else
+             dt_world=dt
           end if
-
-          !---- send own-right-edge into the neigh-right-left-halo region
-          !   - and receive data neigh-right-left-edge into own-right-halo region
-          if (myrank.lt.csize-1) then
-             !$aeg-omp target data use_device_ptr(T)
-             !$aeg-acc host_data use_device(T)
-             !print *,'Start to deal with right'
-             call mpi_isend(T(1,local_ny),local_nx, MPI_DOUBLE,& 
-                           myrank+1,0,MPI_COMM_WORLD,requests(3),ierr)
-             call mpi_irecv(T(1,local_ny+1),local_nx, MPI_DOUBLE,&
-                           myrank+1,0,MPI_COMM_WORLD,requests(4),ierr)
-             !print *,'End to deal with right'
-             !$aeg-acc end host_data
-             !$aeg-omp end target data
-          end if
-
-          !---- Waiting for the MPI messages to finalise
-          !print *,'Start waiting all'
-          call mpi_waitall(4, requests, MPI_STATUSES_IGNORE,ierr)
-          !print *,'End waiting all'
-
-          !---- Send recently-updated own-halo data to the GPU:
-          !$omp target update to(T(1:local_nx,0:0))
-          !$omp target update to(T(1:local_nx,local_ny+1:local_ny+1))
-          !$aeg-acc update device(T(1:local_nx,0:0))
-          !$aeg-acc update device(T(1:local_nx,local_ny+1:local_ny+1))
-
-          !---- reduce the dt value among all MPI ranks
-          call mpi_allreduce(dt, dt_world, 1, MPI_DOUBLE,&
-                             MPI_MAX, MPI_COMM_WORLD, ierr)
 
           !periodically print largest change
           if (mod(iteration,100).eq.0) then
@@ -243,42 +249,42 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
         
-! ------ interior of the array
+! ------ interior of the global array (may go beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
-             T(i,j)=0.0
+             T(i,j)=0.0D0
           end do
        end do
 
-! ----- if the piece is part of the left boundary by=1
-! ----- set lower boundary to 0
+! ----- if the piece is part of the upper boundary by=1
+! ----- set upper boundary to 0
        if (by == 1) then
           do i=0,hnx+1
-             T(i,0)=0.0
+             T(i,0)=0.0D0
           end do
        end if
 
-! ----- if the piece is part of the right boundary by=bytot
-! ----- set upper boundary to the lineary varying temperature
+! ----- if the piece is part of the lower boundary by=bytot
+! ----- set lower boundary to the lineary varying temperature
        if (by == bytot) then
           do i=0,hnx+1
-             T(i,hny+1)=(128.0/dble(nxtot))*dble(ixstart+i-1)   
+             T(i,hny+1)=(128.0D0/dble(nxtot))*dble(ixstart-1+i)   
           end do
        end if
-
-! ----- if the piece is part of the top boundary bx=1
+       
+! ----- if the piece is part of the left boundary bx=1
 ! ----- set left boundary to 0
        if (bx == 1) then
           do j=0,hny+1
-             T(0,j)=0.0
+             T(0,j)=0.0D0
           end do
        end if
-
-! ----- if the piece is part of the bottom boundary bx=bxtot
+       
+! ----- if the piece is part of the right boundary bx=bxtot
 ! ----- set right boundary to the lineary varying temperature
        if (bx == bxtot) then
           do j=0,hny+1
-             T(hnx+1,j)=(128.0/dble(nytot))*dble(jystart+j-1)
+             T(hnx+1,j)=(128.0D0/dble(nytot))*dble(jystart-1+j)
           end do
        end if
        end subroutine init_linear128
@@ -295,43 +301,42 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
         
-! ------ interior of the array
+! ------ interior of the global array (may go beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
-             !T(i,j)=0.0
-             T(i,j)=dble((ixstart+i-1)+(jystart+j-1))
+             T(i,j)=dble((ixstart-1+i)+(jystart-1+j))
           end do
        end do
 
-! ----- if the piece is part of the left boundary by=1
-! ----- set lower boundary to 0
+! ----- if the piece is part of the upper boundary by=1
+! ----- set upper boundary to 0
        if (by == 1) then
           do i=0,hnx+1
-             T(i,0)=0.0
+             T(i,0)=0.0D0
           end do
        end if
 
-! ----- if the piece is part of the right boundary by=bytot
-! ----- set upper boundary to same as index
+! ----- if the piece is part of the lower boundary by=bytot
+! ----- set lower boundary to same as index
        if (by == bytot) then
           do i=0,hnx+1
-             T(i,hny+1)=dble(ixstart+i-1)   
+             T(i,hny+1)=dble(ixstart-1+i)
           end do
        end if
-
-! ----- if the piece is part of the top boundary bx=1
+       
+! ----- if the piece is part of the left boundary bx=1
 ! ----- set left boundary to 0
        if (bx == 1) then
           do j=0,hny+1
-             T(0,j)=0.0
+             T(0,j)=0.0D0
           end do
        end if
-
-! ----- if the piece is part of the bottom boundary bx=bxtot
+       
+! ----- if the piece is part of the right boundary bx=bxtot
 ! ----- set right boundary to same as index
        if (bx == bxtot) then
           do j=0,hny+1
-             T(hnx+1,j)=dble(jystart+j-1)
+             T(hnx+1,j)=dble(jystart-1+j)
           end do
        end if
        end subroutine init_fixedIndexVal
@@ -348,12 +353,44 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
         
-! ------ interior of the array
+! ------ interior of the global array (may go beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
-          T(i,j)=dble(i)
+          T(i,j)=dble(ixstart-1+i)
           end do
        end do
+
+! ----- if the piece is part of the upper boundary by=1
+! ----- set upper boundary to 0
+       if (by == 1) then
+          do i=0,hnx+1
+             T(i,0)=0.0D0
+          end do
+       end if
+
+! ----- if the piece is part of the lower boundary by=bytot
+! ----- set lower boundary to same as index
+       if (by == bytot) then
+          do i=0,hnx+1
+             T(i,hny+1)=dble(ixstart-1+i)
+          end do
+       end if
+       
+! ----- if the piece is part of the left boundary bx=1
+! ----- set left boundary to 0
+       if (bx == 1) then
+          do j=0,hny+1
+             T(0,j)=0.0D0
+          end do
+       end if
+       
+! ----- if the piece is part of the right boundary bx=bxtot
+! ----- set right boundary to same as index
+       if (bx == bxtot) then
+          do j=0,hny+1
+             T(hnx+1,j)=dble(jystart-1+j)
+          end do
+       end if
        end subroutine init_iIndex
 ! ==============================================
 ! =============== SUBROUTINE init_jIndex
@@ -368,12 +405,44 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
         
-! ------ interior of the array
+! ------ interior of the global array (may go beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
-          T(i,j)=dble(j)
+          T(i,j)=dble(jystart-1+j)
           end do
        end do
+
+! ----- if the piece is part of the upper boundary by=1
+! ----- set upper boundary to 0
+       if (by == 1) then
+          do i=0,hnx+1
+             T(i,0)=0.0D0
+          end do
+       end if
+
+! ----- if the piece is part of the lower boundary by=bytot
+! ----- set lower boundary to same as index
+       if (by == bytot) then
+          do i=0,hnx+1
+             T(i,hny+1)=dble(ixstart-1+i)
+          end do
+       end if
+       
+! ----- if the piece is part of the left boundary bx=1
+! ----- set left boundary to 0
+       if (bx == 1) then
+          do j=0,hny+1
+             T(0,j)=0.0D0
+          end do
+       end if
+       
+! ----- if the piece is part of the right boundary bx=bxtot
+! ----- set right boundary to same as index
+       if (bx == bxtot) then
+          do j=0,hny+1
+             T(hnx+1,j)=dble(jystart-1+j)
+          end do
+       end if
        end subroutine init_jIndex
 ! ==============================================
 ! =============== SUBROUTINE init_0
@@ -388,14 +457,33 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
         
-! ------ interior of the array
+! ------ interior of the array (goes beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
           T(i,j)=0.0
           end do
        end do
+
+! ----- set upper boundary to 0
+       do i=0,hnx+1
+          T(i,0)=0.0D0
+       end do
+
+! ----- set lower boundary to same as index
+       do i=0,hnx+1
+          T(i,hny+1)=dble(i)
+       end do
+
+! ----- set left boundary to 0
+       do j=0,hny+1
+          T(0,j)=0.0D0
+       end do
+
+! ----- set right boundary to same as index
+       do j=0,hny+1
+          T(hnx+1,j)=dble(j)
+       end do
        end subroutine init_0
 ! ==============================================
       end program laplace
 ! ======================================================
-

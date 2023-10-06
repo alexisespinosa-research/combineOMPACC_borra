@@ -11,7 +11,7 @@
        integer i,j
        integer max_iterations
        integer :: iteration=1 
-       double precision :: dt=100
+       double precision :: dt=100.0D0
        character(len=32) :: arg
        integer :: start_time,stop_time,clock_rate
        double precision :: elapsed_time
@@ -21,7 +21,7 @@
        checkInput=0
        if (command_argument_count().ne.3) then
          call getarg(0, arg)
-         !print *, 'Usage: ',trim(arg),' <number_of_iterations> <grid_size_in_X> <grid_size_in_Y>'
+         print *, 'Usage: ',trim(arg),' <number_of_iterations> <grid_size_in_X> <grid_size_in_Y>'
          checkInput=-1
        end if
        if (checkInput /= 0) then 
@@ -34,15 +34,17 @@
        read(arg,*)  nx
        call getarg(3,arg)
        read(arg,*)  ny
-       !print *, 'Solving for NumberIterations=',max_iterations,', grid_size_in_X=',nx,&
+       print *, 'Solving for NumberIterations=',max_iterations,', grid_size_in_X=',nx,&
                 'grid_size_in_Y=',ny
-
 
 ! --------- Allocating and Initialising distributed array
        allocate(T(0:nx+1,0:ny+1),T_new(0:nx+1,0:ny+1))
        !print *, 'Passed allocation'
        !call init_linear128(T,nx,ny)
        call init_fixedIndexVal(T,nx,ny)
+       !call init_iIndex(T,nx,ny)
+       !call init_jIndex(T,nx,ny)
+       !call init_0(T,nx,ny)
 
        !---- Printing array
        !print *,T
@@ -68,8 +70,8 @@
           !main computational kernel, average over neighbours in the grid
           !$omp target
           !$omp teams distribute parallel do simd collapse(2)
-          do j=2,ny+1
-             do i=2,nx+1
+          do j=1,ny
+             do i=1,nx
                 T_new(i,j)=0.25*(T(i+1,j)+T(i-1,j)+T(i,j+1)+T(i,j-1))
              end do
           end do 
@@ -79,8 +81,8 @@
           !compute the largest change and copy T_new to T 
           !$omp target  map(dt)
           !$omp teams distribute parallel do simd collapse(2) reduction(max:dt)
-          do j=2,ny+1
-             do i=2,nx+1
+          do j=1,ny
+             do i=1,nx
                 dt = max(abs(T_new(i,j)-T(i,j)),dt)
                 T(i,j)=T_new(i,j)
              end do
@@ -91,7 +93,7 @@
           !periodically print largest change
           if (mod(iteration,100).eq.0) then
           !if (mod(iteration,1).eq.0) then
-             print "(a,i4,2(a,f15.10),2(a,i2),(a,f25.10))",&
+             print "(a,i4,1(a,f15.10),2(a,i2),(a,f25.10))",&
              'Iteration ',iteration,', dt ',dt,&
              ',T(GXB-',CX,',GYB-',CY,')=',T(nx+1-CX,ny+1-CY)
              !print *, T
@@ -100,7 +102,7 @@
           iteration=iteration+1        
        end do
        !$omp target exit data map(from:T) map(delete:T_new)
-       print "(a,i4,2(a,f15.10),2(a,i2),(a,f25.10))",&
+       print "(a,i4,1(a,f15.10),2(a,i2),(a,f25.10))",&
        'Iteration ',iteration,', dt ',dt,&
        ',T(GXB-',CX,',GYB-',CY,')=',T(nx+1-CX,ny+1-CY)
        !print *, T
@@ -126,31 +128,31 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
 
-! ------ interior of the array
+! ------ interior of the array (goes beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
-             T(i,j)=0.0
+            T(i,j)=0.0D0
           end do
        end do
 
-! ----- set lower boundary to 0
+! ----- set upper boundary to 0
        do i=0,hnx+1
-          T(i,0)=0.0
+          T(i,0)=0.0D0
        end do
 
-! ----- set upper boundary to the lineary varying temperature
+! ----- set lower boundary to the lineary varying temperature
        do i=0,hnx+1
-          T(i,hny+1)=(128.0/dble(nx))*dble(i-1)
+          T(i,hny+1)=(128.0D0/dble(nx))*dble(i)
        end do
 
 ! ----- set left boundary to 0
        do j=0,hny+1
-          T(0,j)=0.0
+          T(0,j)=0.0D0
        end do
 
 ! ----- set right boundary to the lineary varying temperature
        do j=0,hny+1
-          T(hnx+1,j)=(128.0/dble(ny))*dble(j-1)
+          T(hnx+1,j)=(128.0D0/dble(ny))*dble(j)
        end do
       end subroutine init_linear128
 ! ==============================================
@@ -165,32 +167,31 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
 
-! ------ interior of the array
+! ------ interior of the array (goes beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
-             !T(i,j)=0.0
-             T(i,j)=dble((i-1)+(j-1))
+          T(i,j)=dble(i+j)
           end do
        end do
 
-! ----- set lower boundary to 0
+! ----- set upper boundary to 0
        do i=0,hnx+1
-          T(i,0)=0.0
+          T(i,0)=0.0D0
        end do
 
-! ----- set upper boundary to same as index
+! ----- set lower boundary to same as index
        do i=0,hnx+1
-          T(i,hny+1)=dble(i-1)
+          T(i,hny+1)=dble(i)
        end do
 
 ! ----- set left boundary to 0
        do j=0,hny+1
-          T(0,j)=0.0
+          T(0,j)=0.0D0
        end do
 
 ! ----- set right boundary to same as index
        do j=0,hny+1
-          T(hnx+1,j)=dble(j-1)
+          T(hnx+1,j)=dble(j)
        end do
        end subroutine init_fixedIndexVal
 ! ==============================================
@@ -205,11 +206,31 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
 
-! ------ interior of the array
+! ------ interior of the array (goes beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
           T(i,j)=dble(i)
           end do
+       end do
+
+! ----- set upper boundary to 0
+       do i=0,hnx+1
+          T(i,0)=0.0D0
+       end do
+
+! ----- set lower boundary to same as index
+       do i=0,hnx+1
+          T(i,hny+1)=dble(i)
+       end do
+
+! ----- set left boundary to 0
+       do j=0,hny+1
+          T(0,j)=0.0D0
+       end do
+
+! ----- set right boundary to same as index
+       do j=0,hny+1
+          T(hnx+1,j)=dble(j)
        end do
        end subroutine init_iIndex
 ! ==============================================
@@ -224,11 +245,31 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
 
-! ------ interior of the array
+! ------ interior of the array (goes beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
           T(i,j)=dble(j)
           end do
+       end do
+
+! ----- set upper boundary to 0
+       do i=0,hnx+1
+          T(i,0)=0.0D0
+       end do
+
+! ----- set lower boundary to same as index
+       do i=0,hnx+1
+          T(i,hny+1)=dble(i)
+       end do
+
+! ----- set left boundary to 0
+       do j=0,hny+1
+          T(0,j)=0.0D0
+       end do
+
+! ----- set right boundary to same as index
+       do j=0,hny+1
+          T(hnx+1,j)=dble(j)
        end do
        end subroutine init_jIndex
 ! ==============================================
@@ -243,11 +284,31 @@
        hnx=size(T,1)-2
        hny=size(T,2)-2
 
-! ------ interior of the array
+! ------ interior of the array (goes beyond, but that will be fixed by boundary conditions)
        do j=0,hny+1
           do i=0,hnx+1
           T(i,j)=0.0
           end do
+       end do
+
+! ----- set upper boundary to 0
+       do i=0,hnx+1
+          T(i,0)=0.0D0
+       end do
+
+! ----- set lower boundary to same as index
+       do i=0,hnx+1
+          T(i,hny+1)=dble(i)
+       end do
+
+! ----- set left boundary to 0
+       do j=0,hny+1
+          T(0,j)=0.0D0
+       end do
+
+! ----- set right boundary to same as index
+       do j=0,hny+1
+          T(hnx+1,j)=dble(j)
        end do
        end subroutine init_0
 ! ==============================================
