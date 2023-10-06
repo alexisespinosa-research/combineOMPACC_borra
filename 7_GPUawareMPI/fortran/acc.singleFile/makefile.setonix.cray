@@ -2,9 +2,9 @@
 # reset this from the command line for easier making of other test code:
 CLUSTER=setonix
 VENDOR=cray
-#MPISURNAME?=noblock_mpiHOST
-MPISURNAME?=noblock_mpiGPU
-OFFLOADTYPE?=OPENACC
+MPISURNAME?=noblock
+MPIDEVICE?=GPU
+OFFLOADTYPE?=OPENMP
 #SURNAME?=singleKernelBasic
 SURNAME?=twoKernelsBasic
 
@@ -12,39 +12,51 @@ SURNAME?=twoKernelsBasic
 # Tags used for preprocess and compile options
 COMPILER_TAG=-D_CRAY_
 ifeq ($(OFFLOADTYPE),OPENMP)
-   OFFLOAD_TAG=-D_OLOMP_
-   OFFLOAD_CFLAG=-hopenmp
-   OFFLOAD_FFLAG=-homp
-   OFFLOAD_SURNAME=omp
+	OFFLOAD_TAG=-D_OLOMP_
+	OFFLOAD_CFLAG=-hopenmp
+	OFFLOAD_FFLAG=-homp
+	OFFLOAD_SURNAME=omp
 else ifeq ($(OFFLOADTYPE),OPENACC)
-   OFFLOAD_TAG=-D_OLACC_
-   OFFLOAD_CFLAG=-hopenacc
-   OFFLOAD_FFLAG=-hacc
-   OFFLOAD_SURNAME=acc
+	OFFLOAD_TAG=-D_OLACC_
+	OFFLOAD_CFLAG=-hopenacc
+	OFFLOAD_FFLAG=-hacc
+	OFFLOAD_SURNAME=acc
+endif
+ifeq ($(MPIDEVICE),GPU)
+	MPIDEVICE_TAG=-D_MPIGPU_
 endif
 
 # --------------------
+# compilation options
 CC=cc
 F90=ftn
 CFLAGS=-O3 $(OFFLOAD_CFLAG) -rm
 FFLAGS=-O3 $(OFFLOAD_FFLAG) -rm
 LIBS=
-ALL_TAGS = -eZ $(COMPILER_TAG) $(OFFLOAD_TAG)
-OBJ=laplace.$(MPISURNAME).$(SURNAME).o
-TARGET=laplace.$(MPISURNAME).$(SURNAME).exe
+ALL_TAGS =-eZ $(COMPILER_TAG) $(OFFLOAD_TAG) $(MPIDEVICE_TAG)
 
-%.o: %.f90
-	$(F90) $(FFLAGS) $(ALL_TAGS) -c -o $@ $<
+# ---------------------
+#  Names to use
+INISOURCENAME=laplace.$(MPISURNAME)_mpi.$(SURNAME)
+EXENAME=$(CLUSTER).$(VENDOR).$(F90).$(OFFLOAD_SURNAME).$(MPIDEVICE)_mpi.$(INISOURCENAME)
+SOURCEHERE=$(EXENAME).f90
+OBJ=$(EXENAME).o
+TARGET=$(EXENAME).exe
 
+# ---------------------
+# Magic:
 $(TARGET): $(OBJ)
 	$(F90) $(FFLAGS) $(LIBS) -o $@ $^
-	mv $(TARGET) $(CLUSTER).$(VENDOR).$(F90).$(OFFLOAD_SURNAME).$(TARGET)
+
+$(OBJ): $(INISOURCENAME).f90
+	cp $< $(SOURCEHERE)
+	$(F90) $(FFLAGS) $(ALL_TAGS) -c -o $@ $(SOURCEHERE)
 
 cleanAll:
-	rm -f *.exe *.o *.s *.lst *.i
+	rm -f *.exe *.o *.s *.lst *.i $(SOURCEHERE)
 
 cleanThis:
-	rm -f $(CLUSTER).$(VENDOR).$(F90).$(OFFLOAD_SURNAME).$(TARGET) $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+	rm -f $(TARGET) $(OBJ) $(SOURCEHERE) $(EXENAME).*
 
 leaveThis:
-	rm -f $(TARGET) *$(SURNAME)*.o *$(SURNAME)*.s
+	rm -f $(TARGET) *$(SOURCENAME)*.o *$(SURNAME)*.s

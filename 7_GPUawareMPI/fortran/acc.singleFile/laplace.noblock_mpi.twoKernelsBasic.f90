@@ -187,21 +187,25 @@
           !---- MPI sharing of inividual halos:
           if (csize.gt.1) then
              !---- Retrieve own-edge data from the GPU:
+#if !defined _MPIGPU_
 #if defined _OPENMP
-             !$aeg-omp target update from(T(1:local_nx,1:1))
-             !$aeg-omp target update from(T(1:local_nx,local_ny:local_ny))
+             !$omp target update from(T(1:local_nx,1:1))
+             !$omp target update from(T(1:local_nx,local_ny:local_ny))
 #elif defined _OPENACC
-             !$aeg-acc update self(T(1:local_nx,1:1))
-             !$aeg-acc update self(T(1:local_nx,local_ny:local_ny))
+             !$acc update self(T(1:local_nx,1:1))
+             !$acc update self(T(1:local_nx,local_ny:local_ny))
+#endif
 #endif
              !print *,'iteration=',iteration,'ownEdgeLeft=',T(1:local_nx,1:1)
              !---- send own-left-edge into the neigh-left-right-halo region
              !   - and receive from neigh-left-right-edge into own-left-halo region
              if (myrank.gt.0) then
+#if defined _MPIGPU_
 #if defined _OPENMP
                 !$omp target data use_device_ptr(T)
 #elif defined _OPENACC
                 !$acc host_data use_device(T)
+#endif
 #endif
                 !print *,'Start to deal with left'
                 call mpi_isend(T(1,1),local_nx, MPI_DOUBLE,&
@@ -209,20 +213,24 @@
                 call mpi_irecv(T(1,0),local_nx, MPI_DOUBLE,&
                               myrank-1,0,MPI_COMM_WORLD,requests(2),ierr)
                 !print *,'End to deal with left'
+#if defined _MPIGPU_
 #if defined _OPENMP
                 !$omp end target data
 #elif defined _OPENACC
                 !$acc end host_data
+#endif
 #endif
              end if
 
              !---- send own-right-edge into the neigh-right-left-halo region
              !   - and receive data neigh-right-left-edge into own-right-halo region
              if (myrank.lt.csize-1) then
+#if defined _MPIGPU_
 #if defined _OPENMP
                 !$omp target data use_device_ptr(T)
 #elif defined _OPENACC
                 !$acc host_data use_device(T)
+#endif
 #endif
                 !print *,'Start to deal with right'
                 call mpi_isend(T(1,local_ny),local_nx, MPI_DOUBLE,& 
@@ -230,10 +238,12 @@
                 call mpi_irecv(T(1,local_ny+1),local_nx, MPI_DOUBLE,&
                               myrank+1,0,MPI_COMM_WORLD,requests(4),ierr)
                 !print *,'End to deal with right'
+#if defined _MPIGPU_
 #if defined _OPENMP
                 !$omp end target data
 #elif defined _OPENACC
                 !$acc end host_data
+#endif
 #endif
              end if
 
@@ -243,12 +253,14 @@
              !print *,'End waiting all'
 
              !---- Send recently-updated own-halo data to the GPU:
+#if !defined _MPIGPU_
 #if defined _OPENMP
-             !$aeg-omp target update to(T(1:local_nx,0:0))
-             !$aeg-omp target update to(T(1:local_nx,local_ny+1:local_ny+1))
+             !$omp target update to(T(1:local_nx,0:0))
+             !$omp target update to(T(1:local_nx,local_ny+1:local_ny+1))
 #elif defined _OPENACC
-             !$aeg-acc update device(T(1:local_nx,0:0))
-             !$aeg-acc update device(T(1:local_nx,local_ny+1:local_ny+1))
+             !$acc update device(T(1:local_nx,0:0))
+             !$acc update device(T(1:local_nx,local_ny+1:local_ny+1))
+#endif
 #endif
 
              !---- reduce the dt value among all MPI ranks
