@@ -34,7 +34,9 @@ int main(int argc, char *argv[]) {
     int max_iterations;                                  // maximal number of iterations
     int iteration=1;                                     // iteration
     double dt=100;                                       // largest change in temperature
-    struct timeval start_time, stop_time, elapsed_time;  // timers
+    struct timeval start_iterations, stop_iterations, stop_one, elapsed_time;  // timers
+    struct timeval start_host2device, stop_host2device;  // timers
+    struct timeval start_device2host, stop_device2host;  // timers
 
     //----Restricted pointers are easier for managed memory for the compilers:
     double *restrict T_new=(double*)malloc(sizeof(double)*(GRIDX+2)*(GRIDY+2)); // temperature grid
@@ -51,13 +53,13 @@ int main(int argc, char *argv[]) {
       max_iterations=atoi(argv[1]);
     }
 
-    gettimeofday(&start_time,NULL); 
 
     //---- Still initialising on the host
     init(T);
 
     //---- Section of preloading arrays to the GPU. Default is to use OpenACC function
     //     And for the internal preloading, decided to also use "enter data" as in functions
+    gettimeofday(&start_host2device,NULL); 
     #ifndef _NOPRELOAD_
        #if defined (_PRELOAD_UNSTRUCTURED_) && defined (_ALL_INTERNAL_)
           #if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
@@ -90,8 +92,10 @@ int main(int argc, char *argv[]) {
           #endif
        #endif
     #endif
+    gettimeofday(&stop_host2device,NULL); 
 
     // ---- simulation iterations in a while loop
+    gettimeofday(&start_iterations,NULL); 
     while ( dt > MAX_TEMP_ERROR && iteration <= max_iterations ) {
     /*for ( iteration=1; iteration <=max_iterations; iteration++){
     if (dt > MAX_TEMP_ERROR) {*/
@@ -130,7 +134,7 @@ int main(int argc, char *argv[]) {
                    //:gcc11:justomp:(internal):fails at execution time: illegal memory access
               #pragma omp target map(to:T[:(GRIDX+2)*(GRIDY+2)]) map(from:T_new[:(GRIDX+2)*(GRIDY+2)])
                    //:gcc11:justomp:(internal):works (fast:only copies data outside the while when preloaded)
-              #pragma omp teams distribute parallel for collapse(2) private(i,j)
+              #pragma omp teams distribute parallel for simd collapse(2) private(i,j)
            #endif
            for(i = 1; i <= GRIDX; i++)
               #ifndef _JUSTOMP_
@@ -190,13 +194,18 @@ int main(int argc, char *argv[]) {
         if((iteration % 100) == 0) 
             printf("Iteration %4.0d, dt %f, T[GX-CO][GY-CO]=%f\n",iteration,dt,
                       T[OFFSET(GRIDX-CORNEROFFSET,GRIDY-CORNEROFFSET)]);
-        
-	     iteration++;
+        if (iteration == 1) 
+           gettimeofday(&stop_one,NULL);
+
+        iteration++;
     /*}else
     {
        break;
     }*/
     }
+    gettimeofday(&stop_iterations,NULL);
+    iteration--;
+    gettimeofday(&start_device2host,NULL);
     //---- Section for copying arrays back to host. Default is to use OpenMP except when STRUCTURED,
     //     where end is implicit at the end of the while loop (c logic)
     //     (Needed because loading functions,and decided statement in internal preload, use "enter data")
@@ -223,15 +232,23 @@ int main(int argc, char *argv[]) {
           #endif
        #endif
     #endif
+    gettimeofday(&stop_device2host,NULL);
 
     //------ Do we have T in the host ready to be saved?
     printf("Final values, iteration %4.0d, dt %f, T[GX-CO][GY-CO]=%f\n",iteration,dt,
               T[OFFSET(GRIDX-CORNEROFFSET,GRIDY-CORNEROFFSET)]);
 
-    gettimeofday(&stop_time,NULL);
-    timersub(&stop_time, &start_time, &elapsed_time); // measure time
-
-    printf("Total time for mesh GRID(X,Y)=(%i,%i) was %f seconds.\n", GRIDX,GRIDY,
+    timersub(&stop_host2device, &start_host2device, &elapsed_time); // measure time
+    printf("Total time for initial host2device transfer was %f seconds.\n",
+           elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+    timersub(&stop_one, &start_iterations, &elapsed_time); // measure time
+    printf("Total time for first iteration was %f seconds.\n",
+           elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+    timersub(&stop_iterations, &stop_one, &elapsed_time); // measure time
+    printf("Total time for mesh GRID(X,Y)=(%i,%i) rest %i iterations was %f seconds.\n", GRIDX,GRIDY,
+           iteration-1,elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+    timersub(&stop_device2host, &start_device2host, &elapsed_time); // measure time
+    printf("Total time for final device2host transfer was %f seconds.\n",
            elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
 
     return 0;

@@ -21,7 +21,8 @@ void getAverage_omp(double *restrict U, double *restrict U_new)
    #pragma omp target map(to:U[:(GRIDX+2)*(GRIDY+2)]) map(from:U_new[:(GRIDX+2)*(GRIDY+2)])
        //:gcc11:justomp:static(non-managedMemory):works (fast: preloaded data works fine)
        //:gcc11:justomp:dynamic(non-managedMemory):works (fast: preloaded data works fine)
-   #pragma omp teams distribute parallel for collapse(2) //Note: Always active and always together with one of the above
+   #pragma omp teams distribute parallel for simd collapse(2) //Note: Always active and always together with one of the above
+   //#pragma omp teams distribute parallel for simd collapse(2) num_teams(1048576) num_threads(256) //This is just for trying to equate performance with crayclang
    for(i = 1; i <= GRIDX; i++)
       for(j = 1; j <= GRIDY; j++)
          U_new[OFFSET(i,j)] = 0.25 * (U[OFFSET(i+1,j)] + U[OFFSET(i-1,j)] +
@@ -40,7 +41,8 @@ double updateT_omp(double *restrict U, double *restrict U_new,double dt_old)
    //#pragma omp target
    //#pragma omp target map(tofrom:dt,U) map(to:U_new)
    #pragma omp target map(tofrom:dt,U[:(GRIDX+2)*(GRIDY+2)]) map(to:U_new[:(GRIDX+2)*(GRIDY+2)])
-   #pragma omp teams distribute parallel for collapse(2) reduction(max:dt) //Note: Always active and always together with one of the above
+   #pragma omp teams distribute parallel for simd collapse(2) reduction(max:dt) //Note: Always active and always together with one of the above
+   //#pragma omp teams distribute parallel for simd collapse(2) reduction(max:dt) num_teams(440) num_threads(256) //This is just for trying to equate performance with crayclang
    for(i = 1; i <= GRIDX; i++){
       for(j = 1; j <= GRIDY; j++){
          #if defined (_PGI_) || defined (_NVC_)

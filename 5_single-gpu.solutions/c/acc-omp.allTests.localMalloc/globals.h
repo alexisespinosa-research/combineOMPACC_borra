@@ -5,8 +5,8 @@
 //#define GRIDX    32768
 
 //#define GRIDY    2048
-#define GRIDY    8192
-//#define GRIDY    16384
+//#define GRIDY    8192
+#define GRIDY    16384
 //#define GRIDY    32768
 
 

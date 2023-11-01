@@ -1,16 +1,18 @@
 #cluster=topaz
 #cluster=mulan
 #cluster=lumi
-cluster=amd
+cluster=setonix
+#cluster=amd
 
-#compiler=gcc
-#compiler=pgcc
-#compiler=nvc
-#compiler=clang
-#compiler=prg-gnu
-#compiler=prg-cray
-#compiler=prg-aocc
-compiler=rocm-llvm-clang
+#compiler?=gcc
+#compiler?=pgcc
+#compiler?=nvc
+#compiler?=clang
+#compiler?=prg-gnu
+compiler?=prg-cray
+#compiler?=prg-aocc
+#compiler?=rocm-llvm-clang
+#compiler?=rocm-amd-clang
 
 CFLAGS=-O3
 
@@ -34,6 +36,19 @@ endif
 ifeq ($(cluster),lumi)
 	GPU_ARCH= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
 	GPU_TARGETS= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
+endif
+ifeq ($(cluster),setonix)
+	GPU_ARCH= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
+	GPU_TARGETS= #GPU settings are automatic with: "module load craype-accel-amd-gfx90a rocm" 
+	UNAMEP= x86_64
+	ROCM_CPUTARGET= $(UNAMEP)-pc-linux-gnu
+
+	ROCM_PATH ?= /opt/rocm-5.2.3
+	ROCM_LLVM ?= $(ROCM_PATH)/llvm
+	ROCM_GPUTARGET ?= amdgcn-amd-amdhsa
+
+	INSTALLED_GPU  = gfx90a
+	ROCM_GPU       ?= $(INSTALLED_GPU)
 endif
 ifeq ($(cluster),amd)
 	UNAMEP= $(shell uname -p)
@@ -116,6 +131,7 @@ endif
 ifeq ($(compiler),prg-cray)
 	CC=cc
 	LIBS=-lm
+	CFLAGS+=-fsave-loopmark
 	OMPFLAGS=-fopenmp
 	ACCFLAGS=-fopenacc #OpenACC does not work on clang-cray compiler
 	MANFLAGS=-managed #Not recognized by gcc, but set to generate an error when tried
