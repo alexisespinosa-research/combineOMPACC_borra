@@ -38,6 +38,22 @@ int main(int argc, char *argv[]) {
     struct timeval start_host2device, stop_host2device;  // timers
     struct timeval start_device2host, stop_device2host;  // timers
 
+    //----These are for the estimates of performance
+    size_t theoreticalFetchSizeInAvg = ((GRIDX+2)*(GRIDY+2)-4)*sizeof(double);
+    size_t theoreticalWriteSizeInAvg = GRIDX*GRIDY*sizeof(double);
+    size_t dataSizeInAvg = theoreticalFetchSizeInAvg + theoreticalWriteSizeInAvg;
+    size_t theoreticalFetchSizeInUpd = GRIDX*GRIDY*2*sizeof(double);
+    size_t theoreticalWriteSizeInUpd = GRIDX*GRIDY*sizeof(double);
+    size_t dataSizeInUpd = theoreticalFetchSizeInUpd + theoreticalWriteSizeInUpd;
+
+    printf("Theoretical:\n");
+    printf("Fetch size in average operation per iter: %g GB\n", theoreticalFetchSizeInAvg * 1E-9);
+    printf("Write size in average operation per iter: %g GB\n", theoreticalWriteSizeInAvg * 1E-9);
+    printf("Data size in average operation per iter: %g GB\n", dataSizeInAvg * 1E-9);
+    printf("Fetch size in update operation per iter: %g GB\n", theoreticalFetchSizeInUpd * 1E-9);
+    printf("Write size in update operation per iter: %g GB\n", theoreticalWriteSizeInUpd * 1E-9);
+    printf("Data size in update operation per iter: %g GB\n", dataSizeInUpd * 1E-9);
+
     //----Restricted pointers are easier for managed memory for the compilers:
     double *restrict T_new=(double*)malloc(sizeof(double)*(GRIDX+2)*(GRIDY+2)); // temperature grid
     double *restrict T=(double*)malloc(sizeof(double)*(GRIDX+2)*(GRIDY+2)); // temperature grid from last iteration
@@ -239,17 +255,23 @@ int main(int argc, char *argv[]) {
               T[OFFSET(GRIDX-CORNEROFFSET,GRIDY-CORNEROFFSET)]);
 
     timersub(&stop_host2device, &start_host2device, &elapsed_time); // measure time
-    printf("Total time for initial host2device transfer was %f seconds.\n",
-           elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+    double elapsedHere=elapsed_time.tv_sec+elapsed_time.tv_usec*1E-6;
+    printf("Total time for initial host2device transfer was %f seconds.\n", elapsedHere);
+
     timersub(&stop_one, &start_iterations, &elapsed_time); // measure time
-    printf("Total time for first iteration was %f seconds.\n",
-           elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+    elapsedHere=elapsed_time.tv_sec+elapsed_time.tv_usec*1E-6;
+    printf("Total time for first iteration was %f seconds.\n", elapsedHere);
+
     timersub(&stop_iterations, &stop_one, &elapsed_time); // measure time
+    elapsedHere=elapsed_time.tv_sec+elapsed_time.tv_usec*1E-6;
     printf("Total time for mesh GRID(X,Y)=(%i,%i) rest %i iterations was %f seconds.\n", GRIDX,GRIDY,
-           iteration-1,elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+           iteration-1,elapsedHere);
+    printf("Effective memory bandwidth for rest %i iterations was %g GB/s.\n", iteration-1,
+           (dataSizeInAvg + dataSizeInUpd)*1E-9*(iteration-1)/elapsedHere);
+           
     timersub(&stop_device2host, &start_device2host, &elapsed_time); // measure time
-    printf("Total time for final device2host transfer was %f seconds.\n",
-           elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+    elapsedHere=elapsed_time.tv_sec+elapsed_time.tv_usec*1E-6;
+    printf("Total time for final device2host transfer was %f seconds.\n", elapsedHere);
 
     return 0;
 }
