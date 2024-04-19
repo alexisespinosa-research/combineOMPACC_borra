@@ -5,8 +5,12 @@
 #         ifndef _JUSTOMP_
              use functions_acc
 #         endif
-#         ifndef _JUSTACC_
+#         if ! defined(_JUSTACC_)
              use functions_omp
+#         endif
+#         if defined(_HIPSTAR_)
+             use functions_omp
+             use aegFunctions_omp
 #         endif
 #      endif
 #      if defined (_NVTX_TRUE_) && defined (_NVHPC_)
@@ -76,7 +80,11 @@
 #            if defined(_JUSTOMP_) || defined(_PRELOADOMP_)
                 call loadGPU_omp(T,T_new) 
 #            else
-                call loadGPU_acc(T,T_new)
+#               if defined(_HIPSTAR_)
+                  call loadGPU_omp(T,T_new) 
+#               else
+                  call loadGPU_acc(T,T_new)
+#               endif
 #            endif
 #         endif
 #      endif
@@ -119,7 +127,12 @@
 #            endif
 #         else
 #            ifndef _JUSTOMP_
-                call getAverage_acc(T,T_new)
+#               ifdef _HIPSTAR_
+                   !call getAverage_omp(T,T_new)
+                   call aegGetAverage_omp(T,T_new)
+#               else
+                   call getAverage_acc(T,T_new)
+#               endif
 #            else
                 call getAverage_omp(T,T_new)
 #            endif
@@ -234,8 +247,6 @@
        elapsed_time=dble(stop_iterations-stop_one)/dble(clock_rate)
        print "(a,i9,a,i9,a,i9,a,f12.6,a)",'Total time for mesh GRID(X,Y)=(',&
               GRIDX,',',GRIDY,') rest ',iteration-1,' iterations was ',elapsed_time,' seconds.'
-       print "(a,i9,a,i9,a,i9,a,f12.6,a)",'Average time for mesh GRID(X,Y)=(',&
-               GRIDX,',',GRIDY,') rest ',iteration-1,' iterations was ',elapsed_time/real(iteration-1),' seconds.'
        elapsed_time=dble(stop_device2host-start_device2host)/dble(clock_rate)
        print "(a,f12.6,a)",'Total time for final device2host transfer was ',&
               elapsed_time,' seconds.'

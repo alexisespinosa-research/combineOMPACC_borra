@@ -247,8 +247,10 @@ ifeq ($(CLUSTER),setonix)
 		STALIBFLAGS=
 		DYNLIBFLAGS=-shared -fPIC
 		#LDFLAGS=-fopenacc #-foffload=nvptx-none #-fopenacc #-fopenmp #I need to find the right flag
+		#LDFLAGS=$(ACCFLAGS)
 		LDFLAGS=$(OMPFLAGS)
 		COMPILER_TAG=-D_CRAY_
+		PRECOMPILER_FLAGS=
 	endif
 	ifeq ($(VENDOR),gnu)
 		CC=cc
@@ -337,7 +339,7 @@ endif
 
 # --------------------
 # Collecting precompiler tags
-PRECOMPILER_TAGS=$(COMPILER_TAG)
+PRECOMPILER_TAGS=$(COMPILER_TAG) $(PRECOMPILER_FLAGS)
 
 # --------------------
 #  General name tags
@@ -647,6 +649,25 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_acc.$(tagHere).so
 	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -o $@
 
+#cpu
+.PHONY: accDynamicHipstar
+mixHere=accHipstar
+tagHere=$(tagF).dynamic
+
+accDynamicHipstar: laplace_$(mixHere).$(tagHere).exe libfunctions_cpu.$(tagHere).so libfunctions_acc.$(tagHere).so libfunctions_omp.$(tagHere).so aegGetAverage_omp.o
+
+aegGetAverage_omp.o: aegGetAverage_omp.F90 globals.o
+	$(FC) $(FFLAGS) $(OMPFLAGS) $(DYNLIBFLAGS) $(PRECOMPILER_TAGS) -c $< -o $@
+
+laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o functions_cpu--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.o aegGetAverage_omp.o 
+	$(FC) $(FFLAGS) $(PRECOMPILER_TAGS) -D_JUSTACC_ -D_HIPSTAR_ -c $< -o $@
+
+laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_acc.$(tagHere).so libfunctions_omp.$(tagHere).so aegGetAverage_omp.o
+	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -lfunctions_omp.$(tagF).dynamic $(filter-out $<,$^) -o $@
+
+#laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagHere).o functions_cpu--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o globals.o
+#	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -D_JUSTACC_ -D_HIPSTAR_ $< -o $@
+#
 #cpu
 .PHONY: accDynamicManaged
 mixHere=acc

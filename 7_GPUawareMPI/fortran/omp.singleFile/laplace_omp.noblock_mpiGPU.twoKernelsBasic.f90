@@ -181,7 +181,7 @@
                 call mpi_irecv(Tp(1,0),local_nx, MPI_DOUBLE,&
                               myrank-1,0,MPI_COMM_WORLD,requests(2),ierr)
                 !print *,'End to deal with left'
-                !$aeg-omp end target data
+                !$omp end target data
                 !$aeg-acc end host_data
                              end if
 
@@ -196,7 +196,7 @@
                 call mpi_irecv(Tp(1,local_ny+1),local_nx, MPI_DOUBLE,&
                               myrank+1,0,MPI_COMM_WORLD,requests(4),ierr)
                 !print *,'End to deal with right'
-                !$aeg-omp end target data
+                !$omp end target data
                 !$aeg-acc end host_data
              end if
 
