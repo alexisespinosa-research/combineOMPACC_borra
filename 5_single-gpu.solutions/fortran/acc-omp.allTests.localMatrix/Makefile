@@ -349,7 +349,6 @@ tagF=$(CLUSTER).$(VENDOR).$(FCNAME)
 tagC=$(CLUSTER).$(VENDOR).$(CCNAME)
 
 # --------------------
-#cpu
 .PHONY: dynamic
 mixHere=acc-omp
 tagHere=$(tagF).dynamic
@@ -601,7 +600,6 @@ laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_
 ##!##	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) -L. -lfunctions_acc.gcc -o $@ $<
 ##!##
 
-#cpu
 .PHONY: dynamicNoGPU
 mixHere=noGPU
 tagHere=$(tagF).dynNoGPU
@@ -633,7 +631,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_omp.$(tagHere).so libfunctions_acc.$(tagHere).so
 	   $(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynNoGPU -lfunctions_acc.$(tagF).dynNoGPU -o $@
 
-#cpu
 .PHONY: accDynamic
 mixHere=acc
 tagHere=$(tagF).dynamic
@@ -647,7 +644,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_acc.$(tagHere).so
 	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -o $@
 
-#cpu
 .PHONY: accDynamicManaged
 mixHere=acc
 tagHere=$(tagF).dynamicManaged
@@ -660,7 +656,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_acc.$(tagHere).so
 	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_acc.$(tagF).dynamicManaged -o $@
 
-#cpu
 .PHONY: accDynamicNoPreload
 mixHere=acc
 tagHere=$(tagF).dynnopre
@@ -674,7 +669,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_acc.$(tagDyn).so
 	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_acc.$(tagF).dynamic -o $@
 
-#cpu
 #Bad Notes: nvhpc/22.7 not improving with managed memory: probably a matter of the arrays
 .PHONY: accDynamicNoPreloadManaged
 mixHere=acc
@@ -689,7 +683,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_acc.$(tagDyn).so
 	$(FC) $(FFLAGS) $(LDLIBS) $(ACCFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_acc.$(tagF).dynamicManaged -o $@
 
-#cpu
 .PHONY: ompDynamic
 mixHere=omp
 tagHere=$(tagF).dynamic
@@ -702,7 +695,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_omp.$(tagHere).so
 	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynamic -o $@
 
-#cpu
 .PHONY: ompDynamicManaged
 mixHere=omp
 tagHere=$(tagF).dynamicManaged
@@ -715,7 +707,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagHere).so libfunctions_omp.$(tagHere).so libfunctions_omp.$(tagHere).so
 	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_omp.$(tagF).dynamicManaged -o $@
 
-#cpu
 .PHONY: ompDynamicNoPreload
 mixHere=omp
 tagHere=$(tagF).dynnopre
@@ -729,7 +720,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_omp.$(tagDyn).so
 	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamic -lfunctions_omp.$(tagF).dynamic -o $@
 
-#cpu
 #Bad Notes: nvhpc/22.7 not improving with managed memory: probably a matter of the arrays
 .PHONY: ompDynamicNoPreloadManaged
 mixHere=omp
@@ -744,7 +734,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagDyn).o f
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o libfunctions_cpu.$(tagDyn).so libfunctions_omp.$(tagDyn).so
 	$(FC) $(FFLAGS) $(LDLIBS) $(OMPFLAGS) $(MANFLAGS) $< -L. -lfunctions_cpu.$(tagF).dynamicManaged -lfunctions_omp.$(tagF).dynamicManaged -o $@
 
-#cpu
 .PHONY: static
 mixHere=acc-omp
 tagHere=$(tagF).static
@@ -775,7 +764,6 @@ laplace_$(mixHere).$(tagHere).o: laplace_acc-omp.F90 functions_cpu.$(tagHere).o 
 laplace_$(mixHere).$(tagHere).exe: laplace_$(mixHere).$(tagHere).o functions_cpu.$(tagHere).o functions_cpu--sub.$(tagHere).o functions_omp.$(tagHere).o functions_omp--sub.$(tagHere).o functions_acc.$(tagHere).o functions_acc--sub.$(tagHere).o globals.o
 	$(FC) $(FFLAGS) $(LDLIBS) $(LDFLAGS) $^ -o $@
 
-#cpu
 .PHONY: staticManaged
 mixHere=acc-omp
 tagHere=$(tagF).staticManaged
